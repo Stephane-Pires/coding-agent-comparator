@@ -91,9 +91,10 @@ export function RunFiles({ files }: { files: readonly WorkspaceFile[] }) {
           <Entries folder={treeOf(paths)} parent="" />
         </FileTree>
         {selected ? (
-          <div className="flex h-96 min-w-0 flex-col overflow-hidden rounded-md border">
-            <p className="truncate border-b px-3 py-2 font-mono text-xs">{selected.path}</p>
-            <div className="min-h-0 flex-1">
+          // The frame of a snippet in an agent's message: a label, then the code on an inset panel.
+          <div className="flex min-w-0 flex-col gap-2 rounded-xl border p-2">
+            <p className="ml-1 truncate font-mono text-xs leading-8 text-muted-foreground">{selected.path}</p>
+            <div className="h-96 overflow-hidden rounded-md border bg-background">
               <FileViewer file={selected} />
             </div>
           </div>

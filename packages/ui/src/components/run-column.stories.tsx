@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { userEvent, within } from 'storybook/test';
 
 import { RunColumn, type RunItem } from './run-column.tsx';
 
@@ -90,6 +91,24 @@ export const WithFiles: Story = {
       { path: 'hello.mjs', content: "console.log('hi');\n", state: 'complete' },
       { path: 'docs/notes.md', content: '# Notes\n', state: 'complete' },
     ],
+  },
+};
+
+const SORT = `export function sort(values: number[]): number[] {
+  // A copy, so the input is left as it was.
+  const result = [...values];
+  return result.sort((a, b) => a - b);
+}
+`;
+
+/** Code reads the same in an agent's message and in the file it wrote. */
+export const SnippetAndFile: Story = {
+  args: {
+    items: [message('1', `Here is the function:\n\n\`\`\`ts\n${SORT}\`\`\``)],
+    files: [{ path: 'sort.ts', content: SORT, state: 'complete' }],
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('treeitem', { name: 'sort.ts' }));
   },
 };
 

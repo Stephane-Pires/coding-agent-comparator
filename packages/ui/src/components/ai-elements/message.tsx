@@ -2,7 +2,7 @@
 
 // From the AI Elements registry, reduced to what the comparator shows: a message, its content and its markdown.
 // Left out of the registry version: actions, branches, the toolbar, and the maths, Mermaid and CJK plugins.
-import { code } from '@streamdown/code';
+import { createCodePlugin } from '@streamdown/code';
 import type { ComponentProps, HTMLAttributes } from 'react';
 import { memo } from 'react';
 import { Streamdown } from 'streamdown';
@@ -42,7 +42,11 @@ export const MessageContent = ({ children, className, ...props }: MessageContent
 
 export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
-const streamdownPlugins = { code };
+// GitHub's default themes: unlike the library's own choice, every colour of theirs is readable (WCAG AA) on the
+// page's background. The file viewer uses the same colours.
+const streamdownPlugins = {
+  code: createCodePlugin({ themes: ['github-light-default', 'github-dark-default'] }),
+};
 
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (

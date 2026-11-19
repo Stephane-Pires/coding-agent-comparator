@@ -6,27 +6,33 @@ import { useId, useSyncExternalStore } from 'react';
 import type { WorkspaceFile } from '@comparator/contracts';
 
 /**
- * The editor's colours: the app's own background, and for the code the colours agent messages already use for
- * their snippets (GitHub's light and dark themes), so a snippet in the chat and the file read as one product.
+ * The editor's look is the one agent messages already give their snippets, so a snippet in the chat and a file read
+ * as one product: the page's background, GitHub's default light and dark colours for the code, the same type size.
  */
 const THEMES = {
   light: {
     base: 'vs',
     background: '#ffffff',
-    comment: '6a737d',
-    keyword: 'd73a49',
-    string: '032f62',
-    number: '005cc5',
-    type: '6f42c1',
+    foreground: '1f2328',
+    lineNumber: '#63636380',
+    comment: '6e7781',
+    keyword: 'cf222e',
+    string: '0a3069',
+    number: '0550ae',
+    type: '953800',
+    tag: '116329',
   },
   dark: {
     base: 'vs-dark',
-    background: '#171717',
+    background: '#0a0a0a',
+    foreground: 'e6edf3',
+    lineNumber: '#a1a1a180',
     comment: '8b949e',
-    keyword: 'f97583',
-    string: '9ecbff',
-    number: '79b8ff',
-    type: 'b392f0',
+    keyword: 'ff7b72',
+    string: 'a5d6ff',
+    number: '79c0ff',
+    type: 'ffa657',
+    tag: '7ee787',
   },
 } as const;
 
@@ -34,12 +40,33 @@ const defineThemes: BeforeMount = (monaco) => {
   for (const [name, theme] of Object.entries(THEMES)) {
     monaco.editor.defineTheme(`comparator-${name}`, {
       base: theme.base,
-      inherit: true,
-      rules: (['comment', 'keyword', 'string', 'number', 'type'] as const).map((token) => ({
-        token,
-        foreground: theme[token],
-      })),
-      colors: { 'editor.background': theme.background },
+      // Only the colours below: the base theme's own would bring a second palette.
+      inherit: false,
+      rules: [
+        { token: '', foreground: theme.foreground },
+        { token: 'comment', foreground: theme.comment },
+        { token: 'keyword', foreground: theme.keyword },
+        { token: 'string', foreground: theme.string },
+        { token: 'number', foreground: theme.number },
+        { token: 'type', foreground: theme.type },
+        { token: 'tag', foreground: theme.tag },
+        { token: 'attribute.name', foreground: theme.number },
+        { token: 'attribute.value', foreground: theme.string },
+        { token: 'string.key.json', foreground: theme.tag },
+      ],
+      colors: {
+        'editor.background': theme.background,
+        'editor.foreground': `#${theme.foreground}`,
+        'editorLineNumber.foreground': theme.lineNumber,
+        'editorLineNumber.activeForeground': theme.lineNumber,
+        // Brackets in the colour of the text, not one colour per pair.
+        ...Object.fromEntries(
+          [1, 2, 3, 4, 5, 6].map((level) => [
+            `editorBracketHighlight.foreground${level}`,
+            `#${theme.foreground}`,
+          ]),
+        ),
+      },
     });
   }
 };
@@ -74,10 +101,20 @@ export function FileViewer({ file }: { file: WorkspaceFile }) {
         domReadOnly: true,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
-        fontSize: 13,
         renderLineHighlight: 'none',
-        // Keep the width for the code: a narrow gutter, with no folding arrows or margin for markers.
-        lineNumbersMinChars: 3,
+        // The snippet's type: the same family, size and line height.
+        fontFamily:
+          'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+        fontSize: 14,
+        lineHeight: 20,
+        padding: { top: 16, bottom: 16 },
+        // And none of an editor's extras: indent guides, the ruler beside the scrollbar.
+        guides: { indentation: false },
+        overviewRulerLanes: 0,
+        overviewRulerBorder: false,
+        // The snippet's gutter: line numbers and a gap, with no folding arrows or margin for markers.
+        lineNumbersMinChars: 4,
+        lineDecorationsWidth: 16,
         folding: false,
         glyphMargin: false,
       }}
