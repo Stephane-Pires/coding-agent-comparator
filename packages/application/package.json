@@ -1,0 +1,10 @@
+{
+  "name": "@comparator/application",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Use cases and the ports they need. Imports only the domain and neverthrow.",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

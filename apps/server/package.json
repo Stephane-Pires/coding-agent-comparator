@@ -1,0 +1,10 @@
+{
+  "name": "@comparator/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Composition root of the API: oRPC on Hono, OpenAPI on Scalar.",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

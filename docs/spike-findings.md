@@ -2,30 +2,30 @@
 
 Date: 2026-11-19. The spike code was thrown away; this note and the recordings in `fixtures/` are what it produced.
 
-**Read this before** designing the domain events (ticket 03), the connectors (05), the server app (07), the sandbox
-adapter (13) and the deployment (14).
+**Read this before** building the first slice (ticket 03: domain events, connectors and server app), the later slices
+(10, 10c, 11), the sandbox adapter (13) and the deployment (14).
 
 ## Conditions
 
-| Item           | Value                                                                                      |
-| -------------- | ------------------------------------------------------------------------------------------ |
-| Machine        | macOS arm64, Node 22.21.1, pnpm 10.15.1                                                    |
-| Claude Code    | `@anthropic-ai/claude-agent-sdk` 0.3.328 (bundles Claude Code 2.1.328), model `claude-haiku-5-5` |
-| Codex          | `@openai/codex-sdk` 0.170.0 (bundles Codex 0.170.0), model `gpt-6-luna`, reasoning effort low |
-| Credentials    | The owner's Claude and ChatGPT **subscription logins**. No API key was available.          |
-| Stream         | oRPC 1.16.4, AI SDK `ai` 7.0.177, `@ai-sdk/react`, Hono 4.13, `@scalar/hono-api-reference` 0.12 |
-| Sandbox        | `@vercel/sandbox` 4.0.0, default image, Vercel Hobby plan                                  |
+| Item        | Value                                                                                            |
+| ----------- | ------------------------------------------------------------------------------------------------ |
+| Machine     | macOS arm64, Node 22.21.1, pnpm 10.15.1                                                          |
+| Claude Code | `@anthropic-ai/claude-agent-sdk` 0.3.328 (bundles Claude Code 2.1.328), model `claude-haiku-5-5` |
+| Codex       | `@openai/codex-sdk` 0.170.0 (bundles Codex 0.170.0), model `gpt-6-luna`, reasoning effort low    |
+| Credentials | The owner's Claude and ChatGPT **subscription logins**. No API key was available.                |
+| Stream      | oRPC 1.16.4, AI SDK `ai` 7.0.177, `@ai-sdk/react`, Hono 4.13, `@scalar/hono-api-reference` 0.12  |
+| Sandbox     | `@vercel/sandbox` 4.0.0, default image, Vercel Hobby plan                                        |
 
 ## Answers
 
-| Question                                              | Answer                                                                    |
-| ----------------------------------------------------- | ------------------------------------------------------------------------- |
-| Do both agents run headless through their SDK?        | Yes.                                                                      |
-| Does `pnpm install` alone bring the agent binaries?   | Yes. No global install, no install script.                                |
-| Do they run on a subscription login, with no API key? | Yes, locally. Not in a sandbox.                                           |
-| Can oRPC serve a stream that `useChat` renders?       | Yes. **The plain Hono fallback is not needed.**                           |
-| Is the stream documented in OpenAPI and Scalar?       | Yes, as `text/event-stream` with the schema of each event.                |
-| Do both agents install and start in a Vercel Sandbox? | Yes. A full run there needs API keys: measured in ticket 13.              |
+| Question                                              | Answer                                                       |
+| ----------------------------------------------------- | ------------------------------------------------------------ |
+| Do both agents run headless through their SDK?        | Yes.                                                         |
+| Does `pnpm install` alone bring the agent binaries?   | Yes. No global install, no install script.                   |
+| Do they run on a subscription login, with no API key? | Yes, locally. Not in a sandbox.                              |
+| Can oRPC serve a stream that `useChat` renders?       | Yes. **The plain Hono fallback is not needed.**              |
+| Is the stream documented in OpenAPI and Scalar?       | Yes, as `text/event-stream` with the schema of each event.   |
+| Do both agents install and start in a Vercel Sandbox? | Yes. A full run there needs API keys: measured in ticket 13. |
 
 ## 1. The agents on a dev machine
 
@@ -53,15 +53,17 @@ query({
 Codex:
 
 ```ts
-new Codex({ env }).startThread({
-  workingDirectory: workspace,
-  model: 'gpt-6-luna',
-  modelReasoningEffort: 'low',
-  sandboxMode: 'workspace-write',
-  approvalPolicy: 'never',
-  networkAccessEnabled: true,
-  webSearchMode: 'live',
-}).runStreamed(task, { signal });
+new Codex({ env })
+  .startThread({
+    workingDirectory: workspace,
+    model: 'gpt-6-luna',
+    modelReasoningEffort: 'low',
+    sandboxMode: 'workspace-write',
+    approvalPolicy: 'never',
+    networkAccessEnabled: true,
+    webSearchMode: 'live',
+  })
+  .runStreamed(task, { signal });
 ```
 
 The workspace was an empty folder under the OS temp directory with `git init`. Codex refuses a folder that is not a
@@ -96,17 +98,17 @@ works in local mode.
 
 The two streams have different grain. `RunEvent` in the domain must be the common shape.
 
-| Concept        | Claude Code                                                                    | Codex                                                            |
-| -------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
-| Start          | `system` / `init` (model, tools, cwd, permission mode)                         | `thread.started`, then `turn.started`                            |
-| Text           | `assistant` message with a `text` block                                        | `item.completed` with an `agent_message` item                    |
-| Tool call      | `assistant` message with a `tool_use` block (`name`, `input`)                  | `item.started` then `item.completed`, one item type per tool     |
-| Tool result    | `user` message with a `tool_result` block, plus a structured `tool_use_result` | The same item, completed (`aggregated_output`, `exit_code`)      |
-| Shell command  | `tool_use` named `Bash`                                                        | `command_execution` item                                         |
-| File edit      | `tool_use` named `Write` or `Edit`; the result has a `structuredPatch`         | `file_change` item: paths and kind (add, update, delete), no content |
-| Web search     | `tool_use` named `WebSearch`; results in the tool result                       | `web_search` item: query and results                             |
-| End            | `result` (cost, usage, turns, duration)                                        | `turn.completed` (token usage only)                              |
-| Noise to drop  | `system` / `thinking_tokens`, `rate_limit_event`, `ToolSearch` tool calls      | `reasoning` and `todo_list` items (not seen, in the types)       |
+| Concept       | Claude Code                                                                    | Codex                                                                |
+| ------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| Start         | `system` / `init` (model, tools, cwd, permission mode)                         | `thread.started`, then `turn.started`                                |
+| Text          | `assistant` message with a `text` block                                        | `item.completed` with an `agent_message` item                        |
+| Tool call     | `assistant` message with a `tool_use` block (`name`, `input`)                  | `item.started` then `item.completed`, one item type per tool         |
+| Tool result   | `user` message with a `tool_result` block, plus a structured `tool_use_result` | The same item, completed (`aggregated_output`, `exit_code`)          |
+| Shell command | `tool_use` named `Bash`                                                        | `command_execution` item                                             |
+| File edit     | `tool_use` named `Write` or `Edit`; the result has a `structuredPatch`         | `file_change` item: paths and kind (add, update, delete), no content |
+| Web search    | `tool_use` named `WebSearch`; results in the tool result                       | `web_search` item: query and results                                 |
+| End           | `result` (cost, usage, turns, duration)                                        | `turn.completed` (token usage only)                                  |
+| Noise to drop | `system` / `thinking_tokens`, `rate_limit_event`, `ToolSearch` tool calls      | `reasoning` and `todo_list` items (not seen, in the types)           |
 
 A small task gave 26 to 38 events from Claude Code and 9 to 11 from Codex.
 
@@ -122,12 +124,12 @@ live hint in the chat. A shell command that writes a file is shown as a shell co
 
 ### Usage and cost
 
-| Field       | Claude Code                                                                                   | Codex                                                                             |
-| ----------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Cost        | `result.total_cost_usd`, an estimate at list prices, reported even on a subscription          | **Not reported**                                                                  |
-| Tokens      | `result.modelUsage[model]`: input, output, cache read, cache creation, web search requests    | `turn.completed.usage`: input, cached input, cache write, output, reasoning output |
-| Turns       | `result.num_turns`                                                                            | Not reported                                                                      |
-| Duration    | `result.duration_ms`, `result.duration_api_ms`                                                | Not reported; measure it around the call                                          |
+| Field    | Claude Code                                                                                | Codex                                                                              |
+| -------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| Cost     | `result.total_cost_usd`, an estimate at list prices, reported even on a subscription       | **Not reported**                                                                   |
+| Tokens   | `result.modelUsage[model]`: input, output, cache read, cache creation, web search requests | `turn.completed.usage`: input, cached input, cache write, output, reasoning output |
+| Turns    | `result.num_turns`                                                                         | Not reported                                                                       |
+| Duration | `result.duration_ms`, `result.duration_api_ms`                                             | Not reported; measure it around the call                                           |
 
 `result.usage` in Claude Code covers the main loop only; `modelUsage` is the one to read. Codex's cost needs a price
 table per model, or stays empty.
@@ -136,11 +138,11 @@ To confirm with an API key: that the cost and usage fields are the same as on a 
 
 ### Failure and cancel
 
-| Case        | Claude Code                                                                                      | Codex                                                                          |
-| ----------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Case        | Claude Code                                                                                                                                          | Codex                                                                                               |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | Wrong model | A `result` event with `subtype: "success"`, `is_error: true`, `terminal_reason: "api_error"`, `api_error_status: 404`. Then the iterator **throws**. | An `error` event and `turn.failed`. Then the iterator **throws** ("Codex Exec exited with code 1"). |
-| No login    | An assistant message from model `<synthetic>`, a `result`, then a throw: "Not logged in"          | `error` events while it retries 10 times (about 13 s), `turn.failed`, then a throw |
-| Cancel      | `abortController.abort()`: the iterator throws `Error("Claude Code process aborted by user")`     | `signal`: the iterator throws an `AbortError`                                   |
+| No login    | An assistant message from model `<synthetic>`, a `result`, then a throw: "Not logged in"                                                             | `error` events while it retries 10 times (about 13 s), `turn.failed`, then a throw                  |
+| Cancel      | `abortController.abort()`: the iterator throws `Error("Claude Code process aborted by user")`                                                        | `signal`: the iterator throws an `AbortError`                                                       |
 
 Both agents report a failure twice: as an event, then as a thrown error. A connector must catch the throw and return
 one failed or cancelled result. Claude Code's `subtype: "success"` cannot be trusted alone; read `is_error`.
@@ -149,11 +151,11 @@ Not tested: how each agent reports hitting a rate limit.
 
 ### Durations (small tasks, small models)
 
-| Task                                         | Claude Code (`claude-haiku-5-5`) | Codex (`gpt-6-luna`, low) |
-| -------------------------------------------- | -------------------------------- | ------------------------- |
-| Web search, write one file, run it           | 31 s, 6 turns, $0.030            | 19 s, 56 k input tokens   |
+| Task                                          | Claude Code (`claude-haiku-5-5`) | Codex (`gpt-6-luna`, low) |
+| --------------------------------------------- | -------------------------------- | ------------------------- |
+| Web search, write one file, run it            | 31 s, 6 turns, $0.030            | 19 s, 56 k input tokens   |
 | Write two files, run tests, rename, run again | 19 s, 12 turns, $0.005           | 19 s, 74 k input tokens   |
-| Start to first event                         | about 5 s                        | about 5.5 s               |
+| Start to first event                          | about 5 s                        | about 5.5 s               |
 
 ### Install size
 
@@ -179,7 +181,7 @@ A contract-first procedure whose output is `eventIterator(ChunkSchema)` works en
 - **OpenAPI:** the generated document describes the response as `text/event-stream` with a `oneOf` of the event
   shapes. Scalar shows the endpoint, the request body, a curl example and an example event.
 
-Two points for ticket 07:
+Two points for the server app (ticket 03):
 
 1. The chunk schema was written by hand as a Zod union of the AI SDK chunk shapes. The AI SDK exports
    `uiMessageChunkSchema`, but the contract needs its own narrower schema to document it.
@@ -187,14 +189,14 @@ Two points for ticket 07:
 
 ## 3. Vercel Sandbox
 
-| Measure                              | Result                                                           |
-| ------------------------------------ | ---------------------------------------------------------------- |
-| Create a sandbox                     | 0.4 s                                                            |
-| System                               | Linux x86_64, Node 24.22, npm 11, pnpm 11, user `ubuntu`, cwd `/vercel` |
-| `npm install` of both SDKs           | 19 s, 826 MB, with the `linux-x64` binaries                      |
-| Start Claude Code through its SDK    | First event after 1.0 s                                          |
-| Start Codex through its SDK          | First event after 0.3 s                                          |
-| Read events from outside             | Yes: one JSON line per event on stdout, received live through `runCommand({ stdout })` |
+| Measure                           | Result                                                                                 |
+| --------------------------------- | -------------------------------------------------------------------------------------- |
+| Create a sandbox                  | 0.4 s                                                                                  |
+| System                            | Linux x86_64, Node 24.22, npm 11, pnpm 11, user `ubuntu`, cwd `/vercel`                |
+| `npm install` of both SDKs        | 19 s, 826 MB, with the `linux-x64` binaries                                            |
+| Start Claude Code through its SDK | First event after 1.0 s                                                                |
+| Start Codex through its SDK       | First event after 0.3 s                                                                |
+| Read events from outside          | Yes: one JSON line per event on stdout, received live through `runCommand({ stdout })` |
 
 - The default image **already contains** `claude` (2.1.325) and `codex` (0.169.0) at `/usr/local/bin`. Ticket 13 can
   point the SDKs at them (`pathToClaudeCodeExecutable`, `codexPathOverride`) or call them directly, and skip the 19 s
@@ -213,13 +215,13 @@ server reads them from outside and feeds the same connector translators as in lo
 milliseconds from the start; `event` is the raw SDK event; `diff` is `git diff` of the workspace at the end. The user
 name and temp paths were replaced.
 
-| File             | Claude Code                                  | Codex                                         |
-| ---------------- | -------------------------------------------- | --------------------------------------------- |
-| `success.json`   | Web search, `Write`, `Bash`, result with cost | Web search, shell command, usage              |
-| `edit.json`      | `Write`, `Bash`, `Grep`, `Read`, `Edit`      | Shell commands only: no file-edit event       |
-| `patch.json`     |                                              | `file_change` events (add, then update)       |
-| `bad-model.json` | Error result, then a throw                   | `error`, `turn.failed`, then a throw          |
-| `abort.json`     | Cancelled after 9 s                          | Cancelled after 9 s                           |
+| File             | Claude Code                                   | Codex                                   |
+| ---------------- | --------------------------------------------- | --------------------------------------- |
+| `success.json`   | Web search, `Write`, `Bash`, result with cost | Web search, shell command, usage        |
+| `edit.json`      | `Write`, `Bash`, `Grep`, `Read`, `Edit`       | Shell commands only: no file-edit event |
+| `patch.json`     |                                               | `file_change` events (add, then update) |
+| `bad-model.json` | Error result, then a throw                    | `error`, `turn.failed`, then a throw    |
+| `abort.json`     | Cancelled after 9 s                           | Cancelled after 9 s                     |
 
 ## Still to verify
 

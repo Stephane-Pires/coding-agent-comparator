@@ -1,0 +1,10 @@
+{
+  "name": "@comparator/domain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure domain model of a comparison: schemas and rules. Imports only zod and neverthrow.",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

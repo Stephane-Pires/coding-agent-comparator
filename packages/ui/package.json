@@ -1,0 +1,10 @@
+{
+  "name": "@comparator/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Design system: React components that render the contract's shapes.",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

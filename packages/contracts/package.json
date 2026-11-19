@@ -1,0 +1,10 @@
+{
+  "name": "@comparator/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The oRPC contract of the API: procedures and DTOs derived from the domain.",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

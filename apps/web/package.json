@@ -1,0 +1,10 @@
+{
+  "name": "@comparator/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The web app: a chat that shows two agent runs side by side.",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
