@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 
@@ -11,7 +11,8 @@ describe('local workspaces', () => {
     const workspaces = localWorkspaces();
     const workspace = (await workspaces.create())._unsafeUnwrap();
     expect(readdirSync(workspace.path)).toEqual([]);
-    expect(relative(tmpdir(), workspace.path).startsWith('..')).toBe(false);
+    expect(relative(realpathSync(tmpdir()), workspace.path).startsWith('..')).toBe(false);
+    expect(realpathSync(workspace.path)).toBe(workspace.path);
     const repository = resolve(import.meta.dirname, '../../..');
     expect(relative(repository, workspace.path).startsWith('..')).toBe(true);
     await workspaces.dispose(workspace);

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { ToolCall } from './tool-call.ts';
+
 /** How a run ended. */
 export const RunOutcome = z.discriminatedUnion('status', [
   z.object({ status: z.literal('succeeded') }),
@@ -17,6 +19,7 @@ export type RunStatus = 'running' | RunOutcome['status'];
  */
 export const RunEvent = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('message'), text: z.string() }),
+  z.object({ kind: z.literal('tool-call'), call: ToolCall }),
   z.object({ kind: z.literal('finished'), outcome: RunOutcome }),
 ]);
 export type RunEvent = z.infer<typeof RunEvent>;

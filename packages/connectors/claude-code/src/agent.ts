@@ -2,7 +2,7 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 
 import type { CodingAgent } from '@comparator/application';
 
-import { translate } from './translate.ts';
+import { createTranslator } from './translate.ts';
 
 interface ClaudeCodeOptions {
   readonly model: string;
@@ -43,6 +43,7 @@ export function claudeCodeAgent({ model, apiKey }: ClaudeCodeOptions): CodingAge
             abortController,
           },
         });
+        const translate = createTranslator(workspace.path);
         for await (const message of messages) yield* translate(message);
       } finally {
         signal.removeEventListener('abort', abort);

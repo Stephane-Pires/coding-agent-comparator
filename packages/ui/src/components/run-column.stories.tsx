@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
-import { RunColumn } from './run-column.tsx';
+import { RunColumn, type RunItem } from './run-column.tsx';
 
 const ANSWER = `I created \`hello.mjs\` and ran it.
 
@@ -10,28 +10,70 @@ console.log('hi');
 
 It printed **hi**.`;
 
+const message = (id: string, text: string): RunItem => ({ type: 'message', id, text });
+const command = (
+  id: string,
+  text: string,
+  output: string,
+  status: 'running' | 'succeeded' = 'succeeded',
+): RunItem => ({
+  type: 'tool-call',
+  call: { id, tool: { type: 'command', command: text }, status, output },
+});
+
 const meta = {
   title: 'Run/RunColumn',
   component: RunColumn,
-  args: { agent: 'claude-code', status: 'succeeded', messages: [] },
+  args: { agent: 'claude-code', status: 'succeeded', items: [] },
 } satisfies Meta<typeof RunColumn>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** The agent started and has said nothing yet. */
+/** The agent started and has done nothing yet. */
 export const Started: Story = { args: { status: 'running' } };
 
-/** Text arrives while the run is in progress. */
-export const Streaming: Story = {
-  args: { status: 'running', messages: [{ id: '1', text: 'I will create the file, then run it.' }] },
+/** The agent is at work: what it says and what it does appear in order. */
+export const Working: Story = {
+  args: {
+    status: 'running',
+    items: [
+      message('1', 'I will check the current Node.js version, then create the file and run it.'),
+      {
+        type: 'tool-call',
+        call: {
+          id: 's1',
+          tool: {
+            type: 'web-search',
+            query: 'current Node.js LTS version 2026',
+            sources: [
+              { title: 'Node.js — Node.js Releases', url: 'https://nodejs.org/en/about/previous-releases' },
+            ],
+          },
+          status: 'succeeded',
+          output: '',
+        },
+      },
+      {
+        type: 'tool-call',
+        call: {
+          id: 'w1',
+          tool: { type: 'other', name: 'Write', input: 'hello.mjs' },
+          status: 'succeeded',
+          output: '',
+        },
+      },
+      command('c1', 'node hello.mjs', '', 'running'),
+    ],
+  },
 };
 
 export const Succeeded: Story = {
   args: {
     agent: 'codex',
-    messages: [
-      { id: '1', text: 'I will create the file, then run it.' },
-      { id: '2', text: ANSWER },
+    items: [
+      message('1', 'I will create the file, then run it.'),
+      command('c1', `cat > hello.mjs <<'EOF'\nconsole.log('hi');\nEOF\nnode hello.mjs`, 'hi\n'),
+      message('2', ANSWER),
     ],
   },
 };
@@ -46,5 +88,17 @@ export const Failed: Story = {
 };
 
 export const Cancelled: Story = {
-  args: { status: 'cancelled', messages: [{ id: '1', text: 'I will create the file, then run it.' }] },
+  args: { status: 'cancelled', items: [message('1', 'I will create the file, then run it.')] },
+};
+
+/** More than a hundred events: consecutive tool calls form blocks, each one line per call. */
+export const LongRun: Story = {
+  args: {
+    items: Array.from({ length: 12 }, (_, step) => [
+      message(`m${step}`, `Step ${step + 1}: writing the next file and checking it.`),
+      ...Array.from({ length: 9 }, (_unused, index) =>
+        command(`c${step}-${index}`, `echo ${step * 9 + index + 1} > ${step * 9 + index + 1}.txt`, ''),
+      ),
+    ]).flat(),
+  },
 };

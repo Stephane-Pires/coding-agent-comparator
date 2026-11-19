@@ -43,6 +43,8 @@ describe('POST /api/runs', () => {
     const response = await post('/api/runs', { agent: 'claude-code', task: '  say hi  ' });
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toContain('text/event-stream');
+    // Without it, a compressing proxy holds the events back until the run is over.
+    expect(response.headers.get('cache-control')).toContain('no-transform');
     expect(await chunks(response)).toEqual([
       { type: 'start' },
       { type: 'text-start', id: 'message-1' },
@@ -56,6 +58,27 @@ describe('POST /api/runs', () => {
     ]);
     expect(claude.runs[0]?.task).toBe('say hi');
     expect(workspaces.disposed).toEqual(workspaces.created);
+  });
+
+  it("streams a tool call as a data part with the call's id, once running and once ended", async () => {
+    const tool = { type: 'command', command: 'node hello.mjs' } as const;
+    const { post } = setup([
+      { kind: 'tool-call', call: { id: 'call-1', tool, status: 'running', output: '' } },
+      { kind: 'tool-call', call: { id: 'call-1', tool, status: 'succeeded', output: 'hi\n' } },
+      { kind: 'finished', outcome: { status: 'succeeded' } },
+    ]);
+    const response = await post('/api/runs', { agent: 'claude-code', task: 'say hi' });
+    expect(await chunks(response)).toEqual([
+      { type: 'start' },
+      { type: 'data-tool-call', id: 'call-1', data: { id: 'call-1', tool, status: 'running', output: '' } },
+      {
+        type: 'data-tool-call',
+        id: 'call-1',
+        data: { id: 'call-1', tool, status: 'succeeded', output: 'hi\n' },
+      },
+      { type: 'data-outcome', data: { status: 'succeeded' } },
+      { type: 'finish' },
+    ]);
   });
 
   it('streams a failure as the outcome of the run, not as an HTTP error', async () => {

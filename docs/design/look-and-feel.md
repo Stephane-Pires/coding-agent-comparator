@@ -24,6 +24,9 @@ Everything else stays black, white and greys, with two tones for the state of a 
 | Failed         | red (`--destructive`) | its icon, the word, a reason |
 | Cancelled      | grey                  | its icon and the word        |
 
+One stated exception: **what a command printed is shown as a terminal**, light text on a near-black panel in both
+themes, with the colours the command itself used. It is the command's output, not the app's palette.
+
 Red is for errors only. The quiet action (Stop) is a bordered button, never pink and never red, so an action never
 reads as a warning.
 

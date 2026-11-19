@@ -16,12 +16,12 @@ export const OneStillRunning: Story = {
       <RunColumn
         agent="claude-code"
         status="running"
-        messages={[{ id: '1', text: 'I will create the file, then run it.' }]}
+        items={[{ type: 'message', id: '1', text: 'I will create the file, then run it.' }]}
       />
       <RunColumn
         agent="codex"
         status="succeeded"
-        messages={[{ id: '1', text: 'Created and ran `hello.mjs`. It printed `hi`.' }]}
+        items={[{ type: 'message', id: '1', text: 'Created and ran `hello.mjs`. It printed `hi`.' }]}
       />
     </ComparisonView>
   ),
@@ -34,13 +34,13 @@ export const OneFailed: Story = {
       <RunColumn
         agent="claude-code"
         status="failed"
-        messages={[]}
+        items={[]}
         failureReason="There's an issue with the selected model (no-such-model). It may not exist or you may not have access to it."
       />
       <RunColumn
         agent="codex"
         status="succeeded"
-        messages={[{ id: '1', text: 'Created and ran `hello.mjs`. It printed `hi`.' }]}
+        items={[{ type: 'message', id: '1', text: 'Created and ran `hello.mjs`. It printed `hi`.' }]}
       />
     </ComparisonView>
   ),

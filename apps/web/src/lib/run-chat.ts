@@ -2,12 +2,12 @@ import { Chat } from '@ai-sdk/react';
 import { eventIteratorToUnproxiedDataStream } from '@orpc/client';
 import type { ChatTransport, UIMessage } from 'ai';
 
-import type { AgentId, RunOutcome, Task } from '@comparator/contracts';
+import type { AgentId, RunOutcome, Task, ToolCall } from '@comparator/contracts';
 
 import { api } from './api.ts';
 
-/** A message of a run's stream: text parts, and the run's outcome as a typed data part. */
-export type RunMessage = UIMessage<never, { outcome: RunOutcome }>;
+/** A message of a run's stream: text parts, with the tool calls and the run's outcome as typed data parts. */
+export type RunMessage = UIMessage<never, { outcome: RunOutcome; 'tool-call': ToolCall }>;
 
 /** Connects a chat to one agent: sending a message starts a run of that agent, and stopping aborts it. */
 function runTransport(agent: AgentId, task: Task): ChatTransport<RunMessage> {

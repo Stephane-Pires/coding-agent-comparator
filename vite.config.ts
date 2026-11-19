@@ -134,7 +134,7 @@ export default defineConfig({
       {
         // What shadcn and AI Elements generate: library code, kept close to the registry's version.
         files: ['packages/ui/src/components/ui/**', 'packages/ui/src/components/ai-elements/**'],
-        rules: { 'typescript/no-floating-promises': 'off' },
+        rules: { 'typescript/no-floating-promises': 'off', 'typescript/no-unsafe-type-assertion': 'off' },
       },
       {
         files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts'],

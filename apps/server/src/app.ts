@@ -19,6 +19,17 @@ export interface AppDeps {
 const NEVER_ABORTED = new AbortController().signal;
 
 /**
+ * Keeps a run's stream live through whatever stands between the API and the reader. A proxy that compresses a
+ * response holds it back until it has enough to compress, which for a stream of events means until the end:
+ * `no-transform` tells it to pass each event on as it is.
+ */
+function live(response: Response): Response {
+  if (response.headers.get('content-type')?.startsWith('text/event-stream'))
+    response.headers.set('cache-control', 'no-cache, no-transform');
+  return response;
+}
+
+/**
  * The HTTP API. One contract, served twice: `/rpc` for the typed client of the web app, `/api` as plain REST.
  * `/openapi.json` is generated from the same contract, and `/docs` shows it.
  */
@@ -37,11 +48,11 @@ export function createApp({ startRun }: AppDeps): Hono {
   const app = new Hono();
   app.use('/rpc/*', async (c, next) => {
     const { matched, response } = await rpc.handle(c.req.raw, { prefix: '/rpc' });
-    return matched ? c.newResponse(response.body, response) : next();
+    return matched ? live(response) : next();
   });
   app.use('/api/*', async (c, next) => {
     const { matched, response } = await rest.handle(c.req.raw, { prefix: '/api' });
-    return matched ? c.newResponse(response.body, response) : next();
+    return matched ? live(response) : next();
   });
   app.get('/openapi.json', async (c) =>
     c.json(

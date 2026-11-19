@@ -4,7 +4,7 @@ import { useChat, type Chat } from '@ai-sdk/react';
 import { useEffect } from 'react';
 
 import type { AgentId, RunStatus } from '@comparator/contracts';
-import { RunColumn } from '@comparator/ui/components/run-column';
+import { RunColumn, type RunItem } from '@comparator/ui/components/run-column';
 
 import type { RunMessage } from '../lib/run-chat.ts';
 
@@ -27,9 +27,14 @@ export function Run({
   const parts = messages
     .filter((message) => message.role === 'assistant')
     .flatMap((message) => message.parts);
-  const texts = parts.flatMap((part, index) =>
-    part.type === 'text' && part.text !== '' ? [{ id: String(index), text: part.text }] : [],
-  );
+  // What the agent said and did, in the order the stream delivered it. A tool call that was sent again when it
+  // ended has replaced its first version in place, so each call appears once, in its latest state.
+  const items = parts.flatMap((part, index): RunItem[] => {
+    if (part.type === 'text')
+      return part.text === '' ? [] : [{ type: 'message', id: String(index), text: part.text }];
+    if (part.type === 'data-tool-call') return [{ type: 'tool-call', call: part.data }];
+    return [];
+  });
   const outcome = parts.find((part) => part.type === 'data-outcome')?.data;
 
   // A stream that ends with no outcome was stopped by the user; one that breaks never reached the API.
@@ -43,5 +48,5 @@ export function Run({
     if (settled) onSettled();
   }, [settled, onSettled]);
 
-  return <RunColumn agent={agent} status={status} messages={texts} failureReason={failureReason} />;
+  return <RunColumn agent={agent} status={status} items={items} failureReason={failureReason} />;
 }

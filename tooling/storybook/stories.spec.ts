@@ -25,6 +25,11 @@ for (const story of stories) {
       await page.locator('#storybook-root > *').first().waitFor();
       await page.waitForFunction('document.fonts.status === "loaded"');
       await expect(page.locator('html')).toHaveClass(theme === 'dark' ? /dark/ : /^(?!.*dark)/);
+      // Open what can be opened, so the content behind a collapsed row is rendered and checked too.
+      for (const closed of await page.locator('#storybook-root button[aria-expanded="false"]').all())
+        await closed.click();
+      // Storybook marks the page when a story throws while rendering.
+      await expect(page.locator('body.sb-show-errordisplay')).toHaveCount(0);
       const { violations } = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
         .analyze();
