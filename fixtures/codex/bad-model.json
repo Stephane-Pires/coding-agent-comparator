@@ -1,0 +1,53 @@
+{
+  "agent": "codex",
+  "model": "no-such-model",
+  "task": "Search the web for the current Node.js LTS major version. Then create a file hello.mjs that prints \"Node LTS is <version>\" with that version, and run it with node to check it works. Keep it minimal.",
+  "durationMs": 2784,
+  "thrown": {
+    "name": "Error",
+    "message": "Codex Exec exited with code 1: Reading prompt from stdin...\n"
+  },
+  "events": [
+    {
+      "t": 108,
+      "event": {
+        "type": "thread.started",
+        "thread_id": "01a1f388-9ca1-7901-a058-04f43f0b72f1"
+      }
+    },
+    {
+      "t": 114,
+      "event": {
+        "type": "item.completed",
+        "item": {
+          "id": "item_0",
+          "type": "error",
+          "message": "Model metadata for `no-such-model` not found. Defaulting to fallback metadata; this can degrade performance and cause issues."
+        }
+      }
+    },
+    {
+      "t": 159,
+      "event": {
+        "type": "turn.started"
+      }
+    },
+    {
+      "t": 2602,
+      "event": {
+        "type": "error",
+        "message": "The 'no-such-model' model is not supported when using Codex with a ChatGPT account."
+      }
+    },
+    {
+      "t": 2608,
+      "event": {
+        "type": "turn.failed",
+        "error": {
+          "message": "The 'no-such-model' model is not supported when using Codex with a ChatGPT account."
+        }
+      }
+    }
+  ],
+  "diff": ""
+}

@@ -1,0 +1,526 @@
+{
+  "agent": "claude-code",
+  "model": "claude-haiku-5-5",
+  "task": "Search the web for the current Node.js LTS major version. Then create a file hello.mjs that prints \"Node LTS is <version>\" with that version, and run it with node to check it works. Keep it minimal.",
+  "durationMs": 11011,
+  "thrown": {
+    "name": "Error",
+    "message": "Claude Code process aborted by user"
+  },
+  "events": [
+    {
+      "t": 345,
+      "event": {
+        "type": "system",
+        "subtype": "init",
+        "cwd": "/tmp/spike-claude-Ie0Rqw",
+        "session_id": "95f0f252-5fec-42fb-9b8f-e48ee3bb228e",
+        "tools": [
+          "Task",
+          "Bash",
+          "CronCreate",
+          "CronDelete",
+          "CronList",
+          "DesignSync",
+          "Edit",
+          "EnterWorktree",
+          "ExitWorktree",
+          "Glob",
+          "Grep",
+          "ListAgents",
+          "Monitor",
+          "NotebookEdit",
+          "PushNotification",
+          "Read",
+          "RemoteTrigger",
+          "ReportFindings",
+          "ScheduleWakeup",
+          "SendMessage",
+          "Skill",
+          "TaskStop",
+          "ToolSearch",
+          "WebSearch",
+          "Workflow",
+          "Write"
+        ],
+        "mcp_servers": [],
+        "model": "claude-haiku-5-5",
+        "permissionMode": "dontAsk",
+        "slash_commands": [
+          "deep-research",
+          "design",
+          "design-sync",
+          "dataviz",
+          "update-config",
+          "verify",
+          "debug",
+          "code-review",
+          "simplify",
+          "batch",
+          "fewer-permission-prompts",
+          "doctor",
+          "loop",
+          "schedule",
+          "claude-api",
+          "workflow-authoring",
+          "run",
+          "run-skill-generator",
+          "plugin-authoring",
+          "advisor",
+          "agents",
+          "auto-mode-setup",
+          "autocompact",
+          "clear",
+          "color",
+          "compact",
+          "config",
+          "output-style",
+          "context",
+          "effort",
+          "fast",
+          "focus",
+          "heapdump",
+          "init",
+          "mcp",
+          "import",
+          "model",
+          "__remote-workflow",
+          "workflow-launch-exec",
+          "reload-plugins",
+          "reload-skills",
+          "rename",
+          "ultrareview",
+          "security-review",
+          "usage-credits",
+          "extra-usage",
+          "usage",
+          "insights",
+          "recap",
+          "skill-doctor",
+          "goal",
+          "design-consent",
+          "design-revoke",
+          "list-agents",
+          "team-onboarding"
+        ],
+        "terminal_slash_commands": [
+          "doctor",
+          "color",
+          "focus",
+          "reload-plugins"
+        ],
+        "apiKeySource": "none",
+        "claude_code_version": "2.1.328",
+        "output_style": "default",
+        "agents": [
+          "claude",
+          "Explore",
+          "general-purpose",
+          "Plan",
+          "statusline-setup",
+          "web-fetch"
+        ],
+        "skills": [
+          "deep-research",
+          "design",
+          "design-sync",
+          "dataviz",
+          "update-config",
+          "verify",
+          "debug",
+          "code-review",
+          "simplify",
+          "batch",
+          "fewer-permission-prompts",
+          "doctor",
+          "loop",
+          "schedule",
+          "claude-api",
+          "workflow-authoring",
+          "run",
+          "run-skill-generator",
+          "plugin-authoring"
+        ],
+        "plugins": [
+          {
+            "name": "cc-plugin-agents-md",
+            "path": "builtin",
+            "source": "cc-plugin-agents-md@builtin"
+          },
+          {
+            "name": "cc-plugin-telemetry",
+            "path": "builtin",
+            "source": "cc-plugin-telemetry@builtin"
+          },
+          {
+            "name": "cc-plugin-privacy",
+            "path": "builtin",
+            "source": "cc-plugin-privacy@builtin"
+          },
+          {
+            "name": "cc-plugin-plugin-authoring",
+            "path": "builtin",
+            "source": "cc-plugin-plugin-authoring@builtin"
+          }
+        ],
+        "capabilities": [
+          "interrupt_receipt_v1",
+          "interrupt_cancel_queued_v1",
+          "interrupt_send_now_v1",
+          "interrupt_requeue_taken_v1",
+          "msg_lifecycle_v1",
+          "request_marker_lists_v1",
+          "ask_user_question_unanswered_v1",
+          "lifecycle_wakeup_source_v1",
+          "sdk_mcp_tools_list_changed",
+          "sdk_mcp_manifests",
+          "mcp_read_resource_v1",
+          "mcp_tool_ui_meta_v1",
+          "ui_surface_v1",
+          "mcp_call_result_not_for_model_v1",
+          "mcp_call_check_permissions_v1",
+          "voice_call_talk_line_v1",
+          "withdrawn_files_note_v2",
+          "ui_pane_widget_v1",
+          "reload_plugins_refuse_if_busy_v1",
+          "silent_resend_files_v1"
+        ],
+        "analytics_disabled": false,
+        "product_feedback_disabled": false,
+        "uuid": "a553ba1a-585e-4565-b2dc-c145928fe065",
+        "memory_paths": {
+          "auto": "/Users/user/.claude/projects/-private-var-folders-1q-dx94vc116hs09t60j3mh644w0000gn-T-spike-claude-Ie0Rqw/memory/"
+        },
+        "original_cwd": "/tmp/spike-claude-Ie0Rqw",
+        "additional_directories": [],
+        "messaging_socket_path": "/tmp/cc-socks/80268.sock",
+        "fast_mode_state": "off",
+        "fast_mode_disabled_reason": "sdk_opt_in_required",
+        "per_turn_effort_active": true,
+        "ultrathink_available": false,
+        "ultrathink_typed_raises": false,
+        "view_mode": "default"
+      }
+    },
+    {
+      "t": 1110,
+      "event": {
+        "type": "rate_limit_event",
+        "rate_limit_info": {
+          "status": "allowed",
+          "resetsAt": 1795097400,
+          "rateLimitType": "five_hour",
+          "overageStatus": "rejected",
+          "overageDisabledReason": "out_of_credits",
+          "isUsingOverage": false,
+          "unifiedWindows": {
+            "five_hour": {
+              "utilization": 0.17,
+              "resetsAt": 1795097400,
+              "status": "allowed"
+            },
+            "seven_day": {
+              "utilization": 0.03,
+              "resetsAt": 1795273200,
+              "status": "allowed"
+            }
+          }
+        },
+        "uuid": "7d05c178-e2c1-4277-8bcb-8d2004ec65c8",
+        "session_id": "95f0f252-5fec-42fb-9b8f-e48ee3bb228e"
+      }
+    },
+    {
+      "t": 1695,
+      "event": {
+        "type": "system",
+        "subtype": "thinking_tokens",
+        "estimated_tokens": 50,
+        "estimated_tokens_delta": 50,
+        "session_id": "95f0f252-5fec-42fb-9b8f-e48ee3bb228e",
+        "uuid": "f1762b99-2eab-4503-843b-541763a8f972"
+      }
+    },
+    {
+      "t": 2111,
+      "event": {
+        "type": "system",
+        "subtype": "thinking_tokens",
+        "estimated_tokens": 213,
+        "estimated_tokens_delta": 163,
+        "session_id": "95f0f252-5fec-42fb-9b8f-e48ee3bb228e",
+        "uuid": "916c8e41-3c6f-4e2b-b756-95b7b84eaa5b"
+      }
+    },
+    {
+      "t": 2113,
+      "event": {
+        "type": "assistant",
+        "message": {
+          "model": "claude-haiku-5-5",
+          "id": "msg_011ChCCMEnuehAgm2biGZDH8",
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "thinking",
+              "thinking": "",
+              "signature": "CAQSygYKEAgUGAI4AUIIdGhpbmtpbmcSDAhwylH9UT6j1rz8kxoMMUoDDhD6bvW+ItU8IjB+LGZfqYh0mXOlzoYv7QFUKGF3CEV3HU7LIw7788h3ufaqJVLqHmLvTQITc0o/VmMq5wVuDGYE0zVEmnxMDg575kqYpdPopyuruZgG7JE4lIPdlCa4pgFQvezN5eUI0aogjXPXPbH+n1XD2u+gAZWc6EOWLYXsADQmaWGyfm+SReil1c8rqDIbo4Ea/AOoZZjN8ln6q/nUgC/1jtvrfMUMM5eh60AHtCcqvwW5RzGU2cev0IHo9JTL7i3JlxJSBfOE0a+tzUGdWs/2a06Ift5n6aSp/SkARZpvhtlanpKJ4dCOtjiYyw6KyfV4rhuCpW5DBZCENMae8iA4gWK6gyVo/IFGGf1hbMrE8kCwb+KhlCiprjlonwnCYk01CewI+rpaWeR4mJrGMvmaDiBvULmwHibV6We4wDDXlxgEEONTfPxNfEgz6qQGoe79ukkN6QywbwhqPbbBxHM/RCC6y+9WzCQxTvbt5mlAyS7KFwH3qjTtNAb3FZK4O4VQaA5T/qf/cO+aVMKou1hbG0thaoVBavJOJcUYH5nH+hnHVm1uUN8v5BX4hGnuuy1YFR0v6peNyrthNBmMOIae9/zCrXhFrYCg7lBH46FGfvgYaUeEN9jCdDkf0sf1XHSzk9jJHgnOSpctYKAQUqabuj4bWR7KoCGY0arnjdzgG7lEjMxM1C/AaxtP4Hjaoyxm48xh2lVwl6Fic4lbV2Lz8WYNyE1C81cV+oNEAANtMSPN/NtggKe3/zYVkBunDeaiVNkTZmgKFShI3hjNzRnpu5o2Qb8Peby5i4p7VC1HQDXx6QIb9V140+G7woOkPjznnLL3kPFX9J42+zCpKczTHLeeW6mO6JpKQUC5pIzUnWDIjXsg3QHWZpi6R8U3khJchmgDH0nwuGbaDr/5DiQIwjRUtz5dilNtaZujY+4zpisOraOY6XqHmdkgicfn21U9joCr9ZLmyqkaLniG9VBhAEFaaMh9tQfUY1SINvWNmMsRrR7RU36Y2FgCr5EE4Bky94miQ6W4882CfHjHdzdjvpS+svyzmlUHYcJTBtQpCxgB"
+            }
+          ],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4232,
+            "cache_read_input_tokens": 13449,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4232
+            },
+            "output_tokens": 8,
+            "service_tier": "standard",
+            "inference_geo": "global",
+            "speed": "standard"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        },
+        "parent_tool_use_id": null,
+        "session_id": "95f0f252-5fec-42fb-9b8f-e48ee3bb228e",
+        "uuid": "63f32ab4-b990-4e45-85cc-f7962c1b7457",
+        "timestamp": "2026-11-19T11:19:43.830Z",
+        "request_id": "req_011ChCCMEdyjA2yJZ62YayLr",
+        "thinking_duration_ms": 610,
+        "thinking_display": "updates"
+      }
+    },
+    {
+      "t": 2115,
+      "event": {
+        "type": "assistant",
+        "message": {
+          "model": "claude-haiku-5-5",
+          "id": "msg_011ChCCMEnuehAgm2biGZDH8",
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01VNdReNNf6t8Xo9dyFamP5a",
+              "name": "ToolSearch",
+              "input": {
+                "query": "select:WebSearch",
+                "max_results": 1
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 4232,
+            "cache_read_input_tokens": 13449,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 4232
+            },
+            "output_tokens": 8,
+            "service_tier": "standard",
+            "inference_geo": "global",
+            "speed": "standard"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        },
+        "parent_tool_use_id": null,
+        "session_id": "95f0f252-5fec-42fb-9b8f-e48ee3bb228e",
+        "uuid": "705333ae-d5d5-4927-aed9-4ee10faf26f6",
+        "timestamp": "2026-11-19T11:19:43.832Z",
+        "request_id": "req_011ChCCMEdyjA2yJZ62YayLr",
+        "wire_tool_inputs": {
+          "toolu_01VNdReNNf6t8Xo9dyFamP5a": {
+            "query": "select:WebSearch",
+            "max_results": 1
+          }
+        }
+      }
+    },
+    {
+      "t": 2123,
+      "event": {
+        "type": "user",
+        "message": {
+          "role": "user",
+          "content": [
+            {
+              "type": "tool_result",
+              "tool_use_id": "toolu_01VNdReNNf6t8Xo9dyFamP5a",
+              "content": [
+                {
+                  "type": "tool_reference",
+                  "tool_name": "WebSearch"
+                }
+              ]
+            }
+          ]
+        },
+        "parent_tool_use_id": null,
+        "session_id": "95f0f252-5fec-42fb-9b8f-e48ee3bb228e",
+        "uuid": "7f0b3308-41e0-4bd1-a1a1-729fc144d1d7",
+        "timestamp": "2026-11-19T11:19:43.839Z",
+        "tool_use_result": {
+          "matches": [
+            "WebSearch"
+          ],
+          "query": "select:WebSearch",
+          "total_deferred_tools": 18
+        },
+        "tool_result_meta": [
+          {
+            "id": "toolu_01VNdReNNf6t8Xo9dyFamP5a",
+            "permission_decision": {
+              "decision": "accept",
+              "source": "config"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "t": 3572,
+      "event": {
+        "type": "system",
+        "subtype": "thinking_tokens",
+        "estimated_tokens": 50,
+        "estimated_tokens_delta": 50,
+        "session_id": "95f0f252-5fec-42fb-9b8f-e48ee3bb228e",
+        "uuid": "8f4d25d7-73ef-4c2a-8754-291995b5a7ae"
+      }
+    },
+    {
+      "t": 4191,
+      "event": {
+        "type": "system",
+        "subtype": "thinking_tokens",
+        "estimated_tokens": 292,
+        "estimated_tokens_delta": 242,
+        "session_id": "95f0f252-5fec-42fb-9b8f-e48ee3bb228e",
+        "uuid": "ebb1a24d-3105-4a53-96c0-640c656067d2"
+      }
+    },
+    {
+      "t": 4192,
+      "event": {
+        "type": "assistant",
+        "message": {
+          "model": "claude-haiku-5-5",
+          "id": "msg_011ChCCMMi8pTAf8TEG4geqm",
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "thinking",
+              "thinking": "",
+              "signature": "CAQSiAkKEAgUGAI4AUIIdGhpbmtpbmcSDKjdmFe4UFA9LzjLTxoMXNKT3gKTQokWc5A2IjDwcYZ+OjzPdVZYnfHS/S017zGmIYTrOvUvpOlASiJuJsjvthuoByMjsRqDOk9nBYAqpQjKm9gNtRCjBKPzv/O0Ln9voXOiflzrfab1IVK3X/MnaY4PXNeWOkbniXr6VahznsdI8ZlgQ11WjLjeFW5MMS+2zGujj5/kIvHIyYNZlggewHanCm0/wIip1hMcxxibimFJvRC5xcsaZXCmyrtAaprD4I6UP3GGMRzGbcqA25krDmzoxSOoUBT0WPLcPISurKaOw0U6W3no+e4+Q+gQEHoQCcPH9IxKFDr6cx3feBr75lge+hqbWJcLacgqFf065epnmCJWDsYrXZXiTtnBzLlEF+jUmga2ksYvfiezMk1bq4c8o4rV2u0w6vE6G+XN2qTlNPiiJM5y1OZV4CJNh4OCxfmtI4FpEzMQUoGwRsB+cWdGJT9uFcA5Em5A2xwJHA/PO66tY86yWPTDimtztYmJqvg41eX5cKmef8aVXjE8uu/WptgpvZo3F617lAYFa1hGoOV+Wa4gTBU62S/o7dMHx5YfJX6Fob+AQUdLGqQ4sr0H8+g0IZARhmAUsHAFu+YtKYiujGCySCS8WIGFij11KgTrgV1lQ8oTprebULvVVPW91Rrsgd1A3RM7tBMEAO3O1ek92k2Fr5XcqnrweinUCaNEwdepqQ5QnDZVh3a+oDyQlkxxE5ZafUUtUycoBWdHslzuYEipx1hSnk/QhgvahvBOP5Pe8Ym5hr8D/kWiHzeqm1oTCwBe9aIRJD7Xg3an6mxVAP2rWiROWxEoFWS9a1ZzYnTYM7GRolxLXOU+3zsC2imT4nyDhADv0JWdkOskMBWzNXElEKx8ZdApG4Ybi6lB1KJ2b5qvsgBHgOXzStI8hMnyUs2lvIGNIIMxHgzjwKeAQ7Xz/RFPlRjHJx4xhv+PcuQmyhTgUG0qs63csdntNi5KPNvSrn633QHg3pFrDjE9rVAP3ng8qLPmg4TGv7Dciy6ezNMeYmKiHdt0W8PeHu5KFdMnaOCZfe75tua2tn+rKFJq5e5FwrYLdI+N3dw4HYuEe1HESbLwevhnMhtp+DJwIZFuFjy30hxKBBbDLdAIfj3wgzav9DDsRvskoN0AaDLregQchdoYVDaXApvhIO6Sjr3PsHna1C6P5p588cn+BArAWrDH08ahqDNReQn/Lcvbo+orL3y+mSOHhabwDrHfSwB6ige/AwFGPCSBSmLWt3shafKsBBwtvTnaF3PzUC/jjc10NySopB7fIRMcfEioAhcDKt4mcWRkX08PN+iq6LH6r99O1huqprZ1MVP30vA7VvGyzfLoLBs9/kFSMvEX+da33x8PO84NjvRZX3Bg+z2oPlXvcVu/brQHHxXc2cu4UUmGrCkP2j5qW+vsMUoYHKt3J9KtW5gudK5gOwPVgKNHInrJQgNobbnlEsfbzKPT1VhSw02t99sz7EnPwTaR6H5cz6Sb1mld7zrOytsxfxgB"
+            }
+          ],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 2814,
+            "cache_read_input_tokens": 17681,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 2814
+            },
+            "output_tokens": 8,
+            "service_tier": "standard",
+            "inference_geo": "global",
+            "speed": "standard"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        },
+        "parent_tool_use_id": null,
+        "session_id": "95f0f252-5fec-42fb-9b8f-e48ee3bb228e",
+        "uuid": "cb3c4f45-b004-46c0-a1a6-595db66f4ffb",
+        "timestamp": "2026-11-19T11:19:45.910Z",
+        "request_id": "req_011ChCCMMWjFqtZXvbpkML5J",
+        "thinking_duration_ms": 1020,
+        "thinking_display": "updates"
+      }
+    },
+    {
+      "t": 4332,
+      "event": {
+        "type": "assistant",
+        "message": {
+          "model": "claude-haiku-5-5",
+          "id": "msg_011ChCCMMi8pTAf8TEG4geqm",
+          "type": "message",
+          "role": "assistant",
+          "content": [
+            {
+              "type": "tool_use",
+              "id": "toolu_01NdxCvMT8JcDaQvAPSnjdPT",
+              "name": "WebSearch",
+              "input": {
+                "query": "current Node.js LTS version 2026",
+                "mode": "standard"
+              },
+              "caller": {
+                "type": "direct"
+              }
+            }
+          ],
+          "container": null,
+          "stop_reason": null,
+          "stop_sequence": null,
+          "stop_details": null,
+          "usage": {
+            "input_tokens": 2,
+            "cache_creation_input_tokens": 2814,
+            "cache_read_input_tokens": 17681,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 2814
+            },
+            "output_tokens": 8,
+            "service_tier": "standard",
+            "inference_geo": "global",
+            "speed": "standard"
+          },
+          "input_transformations": [],
+          "diagnostics": null,
+          "context_management": null
+        },
+        "parent_tool_use_id": null,
+        "session_id": "95f0f252-5fec-42fb-9b8f-e48ee3bb228e",
+        "uuid": "57006208-75d3-4350-b356-a7322533925d",
+        "timestamp": "2026-11-19T11:19:46.049Z",
+        "request_id": "req_011ChCCMMWjFqtZXvbpkML5J",
+        "wire_tool_inputs": {
+          "toolu_01NdxCvMT8JcDaQvAPSnjdPT": {
+            "query": "current Node.js LTS version 2026",
+            "mode": "standard"
+          }
+        }
+      }
+    }
+  ],
+  "diff": ""
+}
