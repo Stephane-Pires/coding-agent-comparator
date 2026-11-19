@@ -1,0 +1,205 @@
+/* The comparator's design system: Tailwind 4 + shadcn theme. Imported once by each app.
+   Look and feel (docs/design/look-and-feel.md): black or white with one magenta pink, Inter, Lucide icons, motion
+   only for what the user just did. Pink has one job: what you can act on, and where you are (the main action, links,
+   the selected item, the focus ring). Red stays for errors, green for a run that succeeded. */
+@import 'tailwindcss';
+@import 'tw-animate-css';
+/* Inter, stored with the app: its latin file only (48 KB). Other scripts use the fallback. */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Generate classes used by the components of this package, wherever it is consumed from. */
+@source './';
+/* The markdown renderer of agent messages (Streamdown) styles itself with Tailwind classes: scan them too. */
+@source '../node_modules/streamdown/dist/*.js';
+@source '../node_modules/@streamdown/code/dist/*.js';
+
+@custom-variant dark (&:is(.dark *));
+
+/* The system font while Inter loads, resized to Inter's metrics so the text does not shift when it arrives. */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial');
+  size-adjust: 107.12%;
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0%;
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  /* Pink fill: the main action (Send); white text on it, 5.2:1. */
+  --primary: oklch(0.56 0.2 345);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.5 0 0); /* 4.5:1 on --muted too (WCAG AA) */
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  /* Red: errors only (a run that failed). */
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  /* Focus ring: pink, 4:1 on white (3:1 needed). */
+  --ring: oklch(0.62 0.19 345);
+  /* Pink as text (links): 5.9:1 on white. */
+  --brand: oklch(0.53 0.2 345);
+  /* Pink tint: where you are (the selected item); the brand text stays 5.3:1 on it. */
+  --selected: oklch(0.965 0.018 345);
+  /* Green: a run that succeeded. Readable as text on white. */
+  --success: oklch(0.5 0.13 155);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  /* Pink fill with black text on it, 8.6:1. */
+  --primary: oklch(0.76 0.15 345);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.72 0.16 345);
+  --brand: oklch(0.8 0.12 345);
+  --selected: oklch(0.27 0.06 345);
+  --success: oklch(0.72 0.14 155);
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-brand: var(--brand);
+  --color-selected: var(--selected);
+  /* Type: Inter, the system font as fallback (sized to match). Six sizes only: xs 12, sm 14, base 16, lg 18, xl 20,
+     2xl 24 (Tailwind's own steps). */
+  --font-sans: 'Inter Variable', 'Inter Fallback', ui-sans-serif, system-ui, sans-serif;
+  /* Motion (docs/design/look-and-feel.md): colour changes, something appearing or leaving, something moving. */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* Layout (docs/design/look-and-feel.md, Layout). Spacing uses Tailwind's own steps 1 2 3 4 6 8 12 (4 to 48 px): no
+   token needed. What is ours: the widths at which the column grid changes, read on the space the content gets
+   (container queries), so an agent's column lays itself out on the width it really has.
+   A 640 px window minus its two 24 px gutters gives 592 px (37rem); a 1024 px one, 976 px (61rem). They give the
+   container variants `@cols-8:` / `@cols-12:` and their `@max-cols-8:` / `@max-cols-12:` counterparts. */
+@theme {
+  --container-cols-8: 37rem;
+  --container-cols-12: 61rem;
+}
+
+/* The page frame: one width and one gutter for the header and the content (16 px on phone, 24 px from 640 px). */
+@utility page-frame {
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--container-7xl);
+  padding-inline: --spacing(4);
+  @variant sm {
+    padding-inline: --spacing(6);
+  }
+}
+
+/* The column grid of a page: 4 columns, then 8, then 12, on the width its container gives it (an ancestor marked
+   `@container`). Areas span columns with `col-span-*`, `@cols-8:col-span-*`, `@cols-12:col-span-*`. */
+@utility page-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: --spacing(4);
+  @container (width >= 37rem) {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: --spacing(6);
+  }
+  @container (width >= 61rem) {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+
+/* Motion durations; none at all with reduced motion. */
+:root {
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 240ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  /* Numbers that are compared line up (durations, tokens, cost): `tabular-nums` on those elements, or
+     `data-numeric`. Never on whole tables: Inter's tabular setting also widens hyphens. */
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Focus is always visible (WCAG 2.4.7). */
+  a:focus-visible,
+  button:focus-visible,
+  [role='button']:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}

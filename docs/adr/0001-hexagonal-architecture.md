@@ -73,8 +73,9 @@ Three things to know:
 - **All settings live in `vite.config.ts`.** Vite+ ignores `.oxlintrc.json` and `.oxfmtrc.json`: with the rules left
   in `.oxlintrc.json`, `vp lint` passed while violations were present. Do not add those files back.
 - **The type checker is `tsrs` 7.1.0, a beta.** `typescript` stays installed for the editor only.
-- **Not yet tried with Storybook** (ticket 08), which builds with Vite. Next.js (ticket 09) does not build with Vite,
-  so only check, test and the hook apply to it.
+- **Storybook runs beside it** (checked on 2026-11-19, Storybook 10). `packages/ui` has its own `vite` for Storybook's
+  build; `vp check`, `vp test` and the hook cover the package's code and stories like any other. Next.js does not
+  build with Vite, so only check, test and the hook apply to it.
 
-Fallback if Vite+ conflicts with Storybook or its beta type checker misbehaves: plain `oxlint --type-aware`, `oxfmt`,
+Fallback if its beta type checker misbehaves: plain `oxlint --type-aware`, `oxfmt`,
 `tsc` and `vitest` scripts with a `.githooks/pre-commit`, as tried first on 2026-11-19 (it passed the same checks).

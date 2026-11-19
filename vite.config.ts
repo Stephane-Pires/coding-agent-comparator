@@ -32,6 +32,7 @@ export default defineConfig({
       'typescript/no-misused-promises': 'error',
       'import/no-cycle': 'error',
       eqeqeq: 'error',
+      'import/no-unassigned-import': ['warn', { allow: ['**/*.css'] }],
       // A run is a stream: its events are awaited one after the other on purpose.
       'no-await-in-loop': 'off',
     },
@@ -131,7 +132,12 @@ export default defineConfig({
         },
       },
       {
-        files: ['**/*.test.ts', '**/*.test.tsx'],
+        // What shadcn and AI Elements generate: library code, kept close to the registry's version.
+        files: ['packages/ui/src/components/ui/**', 'packages/ui/src/components/ai-elements/**'],
+        rules: { 'typescript/no-floating-promises': 'off' },
+      },
+      {
+        files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts'],
         rules: {
           'typescript/no-non-null-assertion': 'off',
           // Tests load recorded JSON and build deliberately wrong values.

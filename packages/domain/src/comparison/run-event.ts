@@ -8,6 +8,9 @@ export const RunOutcome = z.discriminatedUnion('status', [
 ]);
 export type RunOutcome = z.infer<typeof RunOutcome>;
 
+/** Where a run stands. A run is running until it has an outcome; then its status is that outcome's. */
+export type RunStatus = 'running' | RunOutcome['status'];
+
 /**
  * One thing that happened during a run, in the vocabulary shared by every agent.
  * A run is a sequence of events that ends with exactly one `finished` event.

@@ -1,9 +1,11 @@
 import { eventIterator, oc } from '@orpc/contract';
 import { z } from 'zod';
 
-import { AgentId, RunOutcome, Task } from '@comparator/domain';
+import { AgentId, RunOutcome, Task, TASK_MAX_LENGTH } from '@comparator/domain';
 
-export { AgentId, RunOutcome };
+// The domain's vocabulary that clients need: they import it from here, never from the domain.
+export { AgentId, RunOutcome, Task, TASK_MAX_LENGTH };
+export type { RunStatus } from '@comparator/domain';
 
 export const RunInput = z.object({
   agent: AgentId.describe('The coding agent that runs the task.'),
