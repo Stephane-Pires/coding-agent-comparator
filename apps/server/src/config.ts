@@ -11,6 +11,7 @@ const Environment = z.object({
   OPENAI_API_KEY: optional(z.string()),
   CLAUDE_CODE_MODEL: optional(z.string()).default('haiku'),
   CODEX_MODEL: optional(z.string()).default('gpt-6-luna'),
+  TASK_CHECK_MODEL: optional(z.string()).default('haiku'),
   PORT: optional(z.coerce.number().int().min(1).max(65_535)).default(3001),
 });
 
@@ -18,6 +19,8 @@ export interface Config {
   readonly port: number;
   readonly claudeCode: { readonly model: string; readonly apiKey: string | undefined };
   readonly codex: { readonly model: string; readonly apiKey: string | undefined };
+  /** The check that a task is a coding task: asked to Claude Code, with its credentials. */
+  readonly taskCheck: { readonly model: string; readonly apiKey: string | undefined };
 }
 
 /** Reads the configuration from the environment. The error says which variable is wrong and why. */
@@ -32,5 +35,6 @@ export function readConfig(env: Readonly<Record<string, string | undefined>>): R
     port: data.PORT,
     claudeCode: { model: data.CLAUDE_CODE_MODEL, apiKey: data.ANTHROPIC_API_KEY },
     codex: { model: data.CODEX_MODEL, apiKey: data.OPENAI_API_KEY },
+    taskCheck: { model: data.TASK_CHECK_MODEL, apiKey: data.ANTHROPIC_API_KEY },
   });
 }

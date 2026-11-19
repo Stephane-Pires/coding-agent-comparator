@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { Task, type AgentEvent, type Metrics, type RunEvent, type WorkspaceFile } from '@comparator/domain';
 
 import { inMemoryWorkspaces, scriptedAgent, tickingClock, type Step } from '../testing/index.ts';
+import type { CheckTask } from './check-task.ts';
 import { startRun } from './start-run.ts';
 
 const task = Task.parse('write a script');
@@ -19,12 +20,20 @@ const call = (status: 'running' | 'succeeded', id = 'c1'): Shared => ({
   call: { id, tool: { type: 'command', command: 'node write.mjs' }, status, output: '' },
 });
 
-function setup(steps: readonly Step[], workspaces = inMemoryWorkspaces()) {
+const accepts: CheckTask = () => Promise.resolve({ verdict: 'accepted' });
+const refuses: CheckTask = () => Promise.resolve({ verdict: 'refused', reason: 'Not a coding task.' });
+
+function setup(steps: readonly Step[], workspaces = inMemoryWorkspaces(), checkTask = accepts) {
   const claude = scriptedAgent(steps);
   const codex = scriptedAgent([message('from codex'), succeeded]);
   const controller = new AbortController();
   // Each reading of the clock is 750 ms after the one before: a run reads it at its start and at its end.
-  const run = startRun({ agents: { 'claude-code': claude, codex }, workspaces, clock: tickingClock(750) });
+  const run = startRun({
+    agents: { 'claude-code': claude, codex },
+    workspaces,
+    clock: tickingClock(750),
+    checkTask,
+  });
   const all = () => Array.fromAsync(run({ agent: 'claude-code', task, signal: controller.signal }));
   /** The run without its totals, which have their own tests. */
   const events = async () => (await all()).filter((event) => event.kind !== 'metrics');
@@ -34,6 +43,13 @@ function setup(steps: readonly Step[], workspaces = inMemoryWorkspaces()) {
 }
 
 describe('startRun', () => {
+  it('starts nothing for a refused task: no workspace, no agent, and the reason as the failure', async () => {
+    const { all, claude, workspaces } = setup([message('one'), succeeded], inMemoryWorkspaces(), refuses);
+    expect(await all()).toEqual([failed('Not a coding task.')]);
+    expect(claude.runs).toHaveLength(0);
+    expect(workspaces.created).toHaveLength(0);
+  });
+
   it('yields what the agent does, in order, until it finishes', async () => {
     const { events } = setup([message('one'), message('two'), succeeded]);
     expect(await events()).toEqual([message('one'), message('two'), succeeded]);

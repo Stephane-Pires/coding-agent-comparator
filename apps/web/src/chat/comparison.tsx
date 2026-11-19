@@ -6,6 +6,7 @@ import { useCallback, useState } from 'react';
 import type { AgentId, Task } from '@comparator/contracts';
 import { ComparisonMetrics, type RunResult } from '@comparator/ui/components/comparison-metrics';
 import { ComparisonView } from '@comparator/ui/components/comparison-view';
+import { TaskCheckNotice, type TaskCheckState } from '@comparator/ui/components/task-check-notice';
 
 import type { RunMessage } from '../lib/run-chat.ts';
 import { Run } from './run.tsx';
@@ -13,6 +14,15 @@ import { Run } from './run.tsx';
 export interface ComparisonRun {
   readonly agent: AgentId;
   readonly chat: Chat<RunMessage>;
+}
+
+/** A task whose runs do not exist: it is being checked, or it was refused or stopped before they started. */
+export function UnstartedComparison({ task, state }: { task: Task; state: TaskCheckState }) {
+  return (
+    <ComparisonView task={task} summary={<TaskCheckNotice state={state} />}>
+      {null}
+    </ComparisonView>
+  );
 }
 
 /** One task and the run of each agent on it; once every run has ended, the runs in numbers. */

@@ -1,9 +1,10 @@
 import { errAsync, okAsync } from 'neverthrow';
 
-import type { AgentEvent, WorkspaceFile } from '@comparator/domain';
+import type { AgentEvent, Task, TaskAssessment, WorkspaceFile } from '@comparator/domain';
 
 import type { Clock } from '../ports/clock.ts';
 import type { AgentRun, CodingAgent } from '../ports/coding-agent.ts';
+import type { TaskClassifier } from '../ports/task-classifier.ts';
 import type { Workspace, WorkspaceProvider } from '../ports/workspace-provider.ts';
 
 /** One step of a scripted agent: an event to yield, an error to throw, or a pause until the run is aborted. */
@@ -67,6 +68,20 @@ export function inMemoryWorkspaces(
     dispose(workspace) {
       disposed.push(workspace);
       return Promise.resolve();
+    },
+  };
+}
+
+/** A classifier that gives the same answer for every task, or fails with `answer` when it is an error. */
+export function scriptedClassifier(
+  answer: TaskAssessment | Error,
+): TaskClassifier & { readonly asked: Task[] } {
+  const asked: Task[] = [];
+  return {
+    asked,
+    assess(task) {
+      asked.push(task);
+      return answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer);
     },
   };
 }

@@ -54,14 +54,27 @@ The browser only talks to the web app's origin. The web app forwards `/rpc` to t
 server-side setting and no cross-origin rule is needed. A comparison is one stream per agent, opened by the page with
 the same task; closing a stream (the Stop button) cancels that run.
 
+### The task check
+
+Before any agent starts, the API asks a model one question: is this a coding task whose result is files? The page
+asks first (`/rpc/tasks/check`) and shows one refusal for the comparison; each run asks again by itself, so the check
+cannot be skipped by calling the API directly, and finds the verdict already given. A refused task creates no
+workspace and starts no agent.
+
+The question goes to Claude Code, with no tools, on the same credentials as the Claude Code agent. It takes about
+three seconds. If the model cannot be reached, the task is accepted: the check is a filter, not a lock. The rule and
+the instructions are in the core (`verdictOf`, `TASK_CHECK_INSTRUCTIONS`); `pnpm eval:task-check` measures them on
+the labelled tasks of `fixtures/task-check.json`.
+
 ### Routes
 
-| Route                  | What it serves                                                    |
-| ---------------------- | ----------------------------------------------------------------- |
-| `POST /api/runs`       | Runs one agent on a task; the answer is a stream of events (REST) |
-| `POST /rpc/runs/start` | The same procedure for the typed oRPC client                      |
-| `GET /openapi.json`    | The OpenAPI document, generated from the contract                 |
-| `GET /docs`            | The API reference (Scalar)                                        |
+| Route                   | What it serves                                                    |
+| ----------------------- | ----------------------------------------------------------------- |
+| `POST /api/tasks/check` | Says whether a task is a coding task whose result is files        |
+| `POST /api/runs`        | Runs one agent on a task; the answer is a stream of events (REST) |
+| `POST /rpc/runs/start`  | The same procedure for the typed oRPC client                      |
+| `GET /openapi.json`     | The OpenAPI document, generated from the contract                 |
+| `GET /docs`             | The API reference (Scalar)                                        |
 
 ### Configuration and secrets
 
@@ -74,6 +87,7 @@ Read from the environment, and from a `.env` file at the root of the repository 
 | `OPENAI_API_KEY`    | not set                 | Secret. Without it, Codex uses the login on the machine.                |
 | `CLAUDE_CODE_MODEL` | `haiku`                 | The model Claude Code runs on                                           |
 | `CODEX_MODEL`       | `gpt-6-luna`            | The model Codex runs on                                                 |
+| `TASK_CHECK_MODEL`  | `haiku`                 | The model that checks a task before the agents run                      |
 | `PORT`              | `3001`                  | The port of the API                                                     |
 | `API_URL`           | `http://localhost:3001` | Read by the web app: where it forwards `/rpc`. Not sent to the browser. |
 

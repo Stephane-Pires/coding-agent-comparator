@@ -8,6 +8,7 @@ describe('readConfig', () => {
       port: 3001,
       claudeCode: { model: 'haiku', apiKey: undefined },
       codex: { model: 'gpt-6-luna', apiKey: undefined },
+      taskCheck: { model: 'haiku', apiKey: undefined },
     });
   });
 
@@ -23,6 +24,7 @@ describe('readConfig', () => {
       port: 4000,
       claudeCode: { model: 'sonnet', apiKey: 'key-a' },
       codex: { model: 'other', apiKey: 'key-o' },
+      taskCheck: { model: 'haiku', apiKey: 'key-a' },
     });
   });
 

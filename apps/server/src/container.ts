@@ -1,5 +1,5 @@
-import { startRun } from '@comparator/application';
-import { claudeCodeAgent } from '@comparator/connector-claude-code';
+import { checkTask, startRun } from '@comparator/application';
+import { claudeCodeAgent, claudeCodeTaskClassifier } from '@comparator/connector-claude-code';
 import { codexAgent } from '@comparator/connector-codex';
 import { localWorkspaces } from '@comparator/workspace-local';
 
@@ -8,7 +8,10 @@ import type { Config } from './config.ts';
 
 /** The composition root: the only place that knows which adapter stands behind each port. */
 export function createContainer(config: Config): AppDeps {
+  // One check for the whole API: a run finds the verdict its comparison already asked for.
+  const check = checkTask({ classifier: claudeCodeTaskClassifier(config.taskCheck) });
   return {
+    checkTask: check,
     startRun: startRun({
       agents: {
         'claude-code': claudeCodeAgent(config.claudeCode),
@@ -16,6 +19,7 @@ export function createContainer(config: Config): AppDeps {
       },
       workspaces: localWorkspaces(),
       clock: { now: () => performance.now() },
+      checkTask: check,
     }),
   };
 }

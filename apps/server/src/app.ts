@@ -6,13 +6,14 @@ import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
 import { Scalar } from '@scalar/hono-api-reference';
 import { Hono } from 'hono';
 
-import type { StartRun } from '@comparator/application';
+import type { CheckTask, StartRun } from '@comparator/application';
 import { contract } from '@comparator/contracts';
 
 import { present } from './presenter.ts';
 
 export interface AppDeps {
   readonly startRun: StartRun;
+  readonly checkTask: CheckTask;
 }
 
 /** A request that nobody can cancel still needs a signal. */
@@ -33,8 +34,13 @@ function live(response: Response): Response {
  * The HTTP API. One contract, served twice: `/rpc` for the typed client of the web app, `/api` as plain REST.
  * `/openapi.json` is generated from the same contract, and `/docs` shows it.
  */
-export function createApp({ startRun }: AppDeps): Hono {
+export function createApp({ startRun, checkTask }: AppDeps): Hono {
   const router = implement(contract).router({
+    tasks: {
+      check: implement(contract).tasks.check.handler(({ input, signal }) =>
+        checkTask({ ...input, signal: signal ?? NEVER_ABORTED }),
+      ),
+    },
     runs: {
       start: implement(contract).runs.start.handler(({ input, signal }) =>
         present(startRun({ ...input, signal: signal ?? NEVER_ABORTED })),
@@ -58,7 +64,7 @@ export function createApp({ startRun }: AppDeps): Hono {
     c.json(
       await openapi.generate(router, {
         info: {
-          title: 'Coding Agent Comparator API',
+          title: 'Twin Tracks API',
           version: '0.0.0',
           description: 'Send one task to several coding agents and watch how each performs.',
         },
@@ -66,6 +72,6 @@ export function createApp({ startRun }: AppDeps): Hono {
       }),
     ),
   );
-  app.get('/docs', Scalar({ url: '/openapi.json', pageTitle: 'Coding Agent Comparator API' }));
+  app.get('/docs', Scalar({ url: '/openapi.json', pageTitle: 'Twin Tracks API' }));
   return app;
 }

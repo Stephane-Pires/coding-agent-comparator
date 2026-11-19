@@ -7,12 +7,13 @@ import {
   RunOutcome,
   Task,
   TASK_MAX_LENGTH,
+  TaskVerdict,
   ToolCall,
   WorkspaceFile,
 } from '@comparator/domain';
 
 // The domain's vocabulary that clients need: they import it from here, never from the domain.
-export { AgentId, Metrics, RunOutcome, Task, TASK_MAX_LENGTH, ToolCall, WorkspaceFile };
+export { AgentId, Metrics, RunOutcome, Task, TASK_MAX_LENGTH, TaskVerdict, ToolCall, WorkspaceFile };
 export type { RunStatus, Tool } from '@comparator/domain';
 
 export const RunInput = z.object({
@@ -65,7 +66,34 @@ const InvalidInput = z.object({
   ),
 });
 
+const INVALID_INPUT = {
+  BAD_REQUEST: { status: 400, message: 'Input validation failed', data: InvalidInput },
+};
+
+export const TaskCheckInput = z.object({
+  task: Task.describe('What the agents would be asked to do, in plain language.'),
+});
+export type TaskCheckInput = z.infer<typeof TaskCheckInput>;
+
 export const contract = {
+  tasks: {
+    check: oc
+      .route({
+        method: 'POST',
+        path: '/tasks/check',
+        tags: ['Tasks'],
+        summary: 'Check that a task is a coding task',
+        description:
+          'Says whether the agents may run a task: only a coding task whose result is files is accepted. ' +
+          'A refusal carries one sentence for the user: what is missing and how to rephrase. ' +
+          'Starting a run makes the same check, so calling this first is optional: it lets a client show one ' +
+          'refusal for a comparison, before any run is started. If the check itself cannot be made, the task is ' +
+          'accepted.',
+      })
+      .errors(INVALID_INPUT)
+      .input(TaskCheckInput)
+      .output(TaskVerdict),
+  },
   runs: {
     start: oc
       .route({
@@ -76,15 +104,10 @@ export const contract = {
         description:
           'Starts the agent in a fresh, empty workspace and streams what it does as server-sent events, until ' +
           'the run ends. To compare agents, call it once per agent with the same task. ' +
+          'A task that is not a coding task is not run: the stream ends at once with a failed outcome. ' +
           'To cancel a run, close the connection.',
       })
-      .errors({
-        BAD_REQUEST: {
-          status: 400,
-          message: 'Input validation failed',
-          data: InvalidInput,
-        },
-      })
+      .errors(INVALID_INPUT)
       .input(RunInput)
       .output(eventIterator(RunChunk)),
   },

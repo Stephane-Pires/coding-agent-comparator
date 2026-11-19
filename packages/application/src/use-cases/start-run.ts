@@ -3,11 +3,14 @@ import type { AgentId, RunEvent, RunOutcome, Task, Usage, WorkspaceFile } from '
 import type { Clock } from '../ports/clock.ts';
 import type { CodingAgent } from '../ports/coding-agent.ts';
 import type { Workspace, WorkspaceProvider } from '../ports/workspace-provider.ts';
+import type { CheckTask } from './check-task.ts';
 
 export interface StartRunDeps {
   readonly agents: Readonly<Record<AgentId, CodingAgent>>;
   readonly workspaces: WorkspaceProvider;
   readonly clock: Clock;
+  /** Whether the agents may run a task. Asked before anything is created. */
+  readonly checkTask: CheckTask;
 }
 
 export interface StartRunInput {
@@ -56,8 +59,15 @@ function followFiles(workspaces: WorkspaceProvider, workspace: Workspace) {
  * Whatever the agent does, the run ends with exactly one `finished` event, nothing follows it, and the
  * workspace is disposed of. A run that was not cancelled gives its totals just before, also when it failed.
  */
-export const startRun = ({ agents, workspaces, clock }: StartRunDeps): StartRun =>
+export const startRun = ({ agents, workspaces, clock, checkTask }: StartRunDeps): StartRun =>
   async function* run({ agent, task, signal }) {
+    // A task that is refused starts nothing: no workspace, no agent. The page asks first and shows the refusal
+    // once; this is what stops a caller that did not ask.
+    const verdict = await checkTask({ task, signal });
+    if (verdict.verdict === 'refused') {
+      yield { kind: 'finished', outcome: { status: 'failed', reason: verdict.reason } };
+      return;
+    }
     const startedAt = clock.now();
     const created = await workspaces.create();
     if (created.isErr()) {

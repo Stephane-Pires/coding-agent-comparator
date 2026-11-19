@@ -1,18 +1,27 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { startRun } from '@comparator/application';
+import { startRun, type CheckTask } from '@comparator/application';
 import { inMemoryWorkspaces, scriptedAgent, tickingClock, type Step } from '@comparator/application/testing';
 
 import { createApp } from './app.ts';
 
-function setup(claudeSteps: readonly Step[], workspaces = inMemoryWorkspaces()) {
+const accepts: CheckTask = () => Promise.resolve({ verdict: 'accepted' });
+const refuses: CheckTask = () => Promise.resolve({ verdict: 'refused', reason: 'Not a coding task.' });
+
+function setup(claudeSteps: readonly Step[], workspaces = inMemoryWorkspaces(), checkTask = accepts) {
   const claude = scriptedAgent(claudeSteps);
   const codex = scriptedAgent([
     { kind: 'message', text: 'from codex' },
     { kind: 'finished', outcome: { status: 'succeeded' } },
   ]);
   const app = createApp({
-    startRun: startRun({ agents: { 'claude-code': claude, codex }, workspaces, clock: tickingClock(500) }),
+    checkTask,
+    startRun: startRun({
+      agents: { 'claude-code': claude, codex },
+      workspaces,
+      clock: tickingClock(500),
+      checkTask,
+    }),
   });
   const post = (path: string, body: unknown, signal?: AbortSignal) =>
     app.request(path, {
@@ -36,6 +45,35 @@ async function allChunks(response: Response): Promise<{ type: string }[]> {
 /** The same without the run's totals, which have their own test. */
 const chunks = async (response: Response) =>
   (await allChunks(response)).filter((chunk) => chunk.type !== 'data-metrics');
+
+describe('POST /api/tasks/check', () => {
+  it('answers with the verdict of the check', async () => {
+    const accepted = await setup([]).post('/api/tasks/check', { task: 'write a script' });
+    expect(accepted.status).toBe(200);
+    expect(await accepted.json()).toEqual({ verdict: 'accepted' });
+    const refused = await setup([], inMemoryWorkspaces(), refuses).post('/api/tasks/check', {
+      task: 'a poem',
+    });
+    expect(await refused.json()).toEqual({ verdict: 'refused', reason: 'Not a coding task.' });
+  });
+
+  it('refuses an empty task before any check, naming the field', async () => {
+    const response = await setup([]).post('/api/tasks/check', { task: '   ' });
+    expect(response.status).toBe(400);
+    expect(JSON.stringify(await response.json())).toContain('task');
+  });
+
+  it('a run of a refused task ends at once with the reason, and starts no agent', async () => {
+    const { post, claude } = setup([{ kind: 'message', text: 'hi' }], inMemoryWorkspaces(), refuses);
+    const response = await post('/api/runs', { agent: 'claude-code', task: 'a poem' });
+    expect(await chunks(response)).toEqual([
+      { type: 'start' },
+      { type: 'data-outcome', data: { status: 'failed', reason: 'Not a coding task.' } },
+      { type: 'finish' },
+    ]);
+    expect(claude.runs).toHaveLength(0);
+  });
+});
 
 describe('POST /api/runs', () => {
   it('streams the run of the chosen agent as server-sent events', async () => {
