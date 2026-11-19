@@ -2,12 +2,16 @@ import type { RunStatus } from '@comparator/contracts';
 import { ICONS } from '@comparator/ui/icons';
 import { cn } from '@comparator/ui/lib/utils';
 
-/** The word and the tone of each status. Colour is never the only signal: the icon and the word say it too. */
+/**
+ * The word and the tone of each status. The words are those of a run on a ski course (docs/design/look-and-feel.md,
+ * Voice): a run finished, did not finish, or was stopped. Colour is never the only signal: the
+ * icon and the word say it too.
+ */
 const STATUSES: Record<RunStatus, { label: string; tone: string }> = {
   running: { label: 'Running', tone: 'text-muted-foreground' },
-  succeeded: { label: 'Succeeded', tone: 'text-success' },
-  failed: { label: 'Failed', tone: 'text-destructive' },
-  cancelled: { label: 'Cancelled', tone: 'text-muted-foreground' },
+  succeeded: { label: 'Finished', tone: 'text-success' },
+  failed: { label: 'Did not finish', tone: 'text-destructive' },
+  cancelled: { label: 'Stopped', tone: 'text-muted-foreground' },
 };
 
 /** Shows where a run stands: running, or how it ended. */

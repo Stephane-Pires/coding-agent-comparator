@@ -72,8 +72,31 @@ Dialogs and menus keep their library's short defaults. Never: on page load, numb
 pulses, anything that delays a click.
 
 One stated exception: **a run in progress shows a spinner**, and text appears as the agent writes it. Both report
-work that is happening now; neither is decoration. With the system's reduced-motion setting nothing moves (the CSS
+work that is happening now; neither is decoration.
+
+A second one: **the tracks of the empty page's picture draw themselves once**, together, in 1.2 s, when the page
+opens. It is the product's one piece of character, shown before any work exists. With the system's reduced-motion setting nothing moves (the CSS
 durations become 0) and the spinner stays as a still icon.
+
+## Voice
+
+The product is **Twin Tracks**: the tracks two skiers leave side by side on one slope.
+
+One idea: **every task is a run down the same course.** Two agents start together and the app keeps the times. The app
+already called it a "run"; the voice takes that word seriously, lightly, the way a friend on the ski lift would.
+
+| Trait        | It means                                                  | It does not mean                       |
+| ------------ | --------------------------------------------------------- | -------------------------------------- |
+| Brief        | Titles of six words or fewer, the verb first              | Cryptic, or dropping what a user needs |
+| Good company | One light touch per screen; on your side when a run fails | Puns everywhere, or a joke in an error |
+| Fair         | Says what happened; has no favourite agent                | Cold, or silent                        |
+
+- A run is **running**, then **finished**, **did not finish** or was **stopped**. Only a duration is ever called
+  "fastest": never "race", "winner" or "loser". The steps inside a run (tool calls) keep plain words: running,
+  done, failed.
+- A mountain word is kept only if the sentence is clear to someone who has never skied. Left out after
+  testing with a reader who never skied: fresh snow, on the course, out of the gate, piste, powder.
+- Numbers, errors and code stay plain. The reason a run did not finish is the agent's own words, never rewritten.
 
 ## Layout
 

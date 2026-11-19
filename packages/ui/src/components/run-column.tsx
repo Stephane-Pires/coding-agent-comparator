@@ -51,6 +51,10 @@ export function RunColumn({ agent, status, items, files = [], failureReason }: R
         </h3>
         <RunStatusBadge status={status} />
       </header>
+      {/* Until the agent's first step the column would be blank, for as long as half a minute. */}
+      {status === 'running' && items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">At the start. Its first moves show here.</p>
+      ) : null}
       {blocksOf(items).map((block) =>
         block.type === 'message' ? (
           <Message key={block.id} from="assistant">

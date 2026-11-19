@@ -167,6 +167,12 @@
   --duration-base: 180ms;
   --duration-slow: 240ms;
 }
+/* The empty page's picture: a ski track drawing itself (components/twin-tracks.tsx). */
+@keyframes draw-track {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   :root {
     --duration-fast: 0ms;

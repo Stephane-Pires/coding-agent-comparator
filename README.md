@@ -1,4 +1,4 @@
-# Coding Agent Comparator
+# Twin Tracks
 
 Send the same task to two coding agents (Claude Code and Codex) and compare, in a web app, how each one performed.
 

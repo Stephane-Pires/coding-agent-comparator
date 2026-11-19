@@ -6,4 +6,4 @@ const meta = { title: 'Layout/PageHeader', component: PageHeader } satisfies Met
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const TitleOnly: Story = { args: { title: 'Compare coding agents' } };
+export const TitleOnly: Story = { args: { title: 'Twin Tracks' } };

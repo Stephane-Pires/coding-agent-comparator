@@ -6,15 +6,14 @@ import { AgentId, type Task } from '@comparator/contracts';
 import {
   Conversation,
   ConversationContent,
-  ConversationEmptyState,
   ConversationScrollButton,
 } from '@comparator/ui/components/ai-elements/conversation';
+import { EmptyComparison } from '@comparator/ui/components/empty-comparison';
 import { PageHeader } from '@comparator/ui/components/page-header';
 import { TaskInput } from '@comparator/ui/components/task-input';
 
 import { startRunChat } from '../lib/run-chat.ts';
 import { Comparison, type ComparisonRun } from './comparison.tsx';
-import { SAMPLE_TASKS } from './samples.ts';
 
 /** One task, sent to every agent: one run each. */
 interface SentComparison {
@@ -41,15 +40,12 @@ export function ChatPage() {
   return (
     <div className="flex h-dvh flex-col">
       <div className="page-frame py-4">
-        <PageHeader title="Compare coding agents" />
+        <PageHeader title="Twin Tracks" />
       </div>
       <Conversation className="min-h-0 flex-1">
         <ConversationContent className="page-frame gap-8 py-4">
           {comparisons.length === 0 ? (
-            <ConversationEmptyState
-              title="No comparison yet"
-              description="Write a task below, or pick one of the examples. Every agent gets the same task and starts from an empty folder."
-            />
+            <EmptyComparison />
           ) : (
             comparisons.map((comparison) => (
               <Comparison
@@ -64,7 +60,7 @@ export function ChatPage() {
         <ConversationScrollButton />
       </Conversation>
       <div className="page-frame border-t py-4">
-        <TaskInput running={inProgress > 0} onSend={send} onStop={stop} samples={SAMPLE_TASKS} />
+        <TaskInput running={inProgress > 0} onSend={send} onStop={stop} />
       </div>
     </div>
   );
