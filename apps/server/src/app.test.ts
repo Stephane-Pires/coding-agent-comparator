@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 
 import { startRun } from '@comparator/application';
-import { inMemoryWorkspaces, scriptedAgent, type Step } from '@comparator/application/testing';
+import { inMemoryWorkspaces, scriptedAgent, tickingClock, type Step } from '@comparator/application/testing';
 
 import { createApp } from './app.ts';
 
@@ -11,7 +11,9 @@ function setup(claudeSteps: readonly Step[], workspaces = inMemoryWorkspaces()) 
     { kind: 'message', text: 'from codex' },
     { kind: 'finished', outcome: { status: 'succeeded' } },
   ]);
-  const app = createApp({ startRun: startRun({ agents: { 'claude-code': claude, codex }, workspaces }) });
+  const app = createApp({
+    startRun: startRun({ agents: { 'claude-code': claude, codex }, workspaces, clock: tickingClock(500) }),
+  });
   const post = (path: string, body: unknown, signal?: AbortSignal) =>
     app.request(path, {
       method: 'POST',
@@ -23,14 +25,17 @@ function setup(claudeSteps: readonly Step[], workspaces = inMemoryWorkspaces()) 
 }
 
 /** The `data:` payloads of a server-sent event stream. */
-async function chunks(response: Response): Promise<unknown[]> {
+async function allChunks(response: Response): Promise<{ type: string }[]> {
   const text = await response.text();
   return text
     .split('\n')
     .filter((line) => line.startsWith('data: '))
-    .map((line) => JSON.parse(line.slice('data: '.length)) as unknown)
+    .map((line) => JSON.parse(line.slice('data: '.length)) as { type: string } | null)
     .filter((chunk) => chunk !== null && typeof chunk === 'object' && 'type' in chunk);
 }
+/** The same without the run's totals, which have their own test. */
+const chunks = async (response: Response) =>
+  (await allChunks(response)).filter((chunk) => chunk.type !== 'data-metrics');
 
 describe('POST /api/runs', () => {
   it('streams the run of the chosen agent as server-sent events', async () => {
@@ -90,6 +95,21 @@ describe('POST /api/runs', () => {
     expect(await chunks(response)).toEqual([
       { type: 'start' },
       { type: 'data-file', id: 'src/hello.mjs', data: file },
+      { type: 'data-outcome', data: { status: 'succeeded' } },
+      { type: 'finish' },
+    ]);
+  });
+
+  it('streams the totals of the run as a data part, before the outcome', async () => {
+    const usage = { inputTokens: 1200, cachedInputTokens: 800, outputTokens: 90, costUsd: null };
+    const { post } = setup([
+      { kind: 'usage', usage },
+      { kind: 'finished', outcome: { status: 'succeeded' } },
+    ]);
+    const response = await post('/api/runs', { agent: 'claude-code', task: 'say hi' });
+    expect(await allChunks(response)).toEqual([
+      { type: 'start' },
+      { type: 'data-metrics', data: { durationMs: 500, usage, toolCalls: 0, files: 0 } },
       { type: 'data-outcome', data: { status: 'succeeded' } },
       { type: 'finish' },
     ]);

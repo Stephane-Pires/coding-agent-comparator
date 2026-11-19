@@ -7,9 +7,3 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const TitleOnly: Story = { args: { title: 'Compare coding agents' } };
-export const WithDescription: Story = {
-  args: {
-    title: 'Compare coding agents',
-    description: 'Send one task to Claude Code and Codex, and watch how each one handles it.',
-  },
-};

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import { describe, expect, it } from 'vite-plus/test';
 
-import type { RunEvent, ToolCall } from '@comparator/domain';
+import type { AgentEvent, ToolCall } from '@comparator/domain';
 
 import { createTranslator } from './translate.ts';
 
@@ -16,14 +16,14 @@ function recorded(name: string): { messages: SDKMessage[]; workspace: string } {
   const init = messages.find((message) => message.type === 'system' && message.subtype === 'init');
   return { messages, workspace: init && 'cwd' in init ? init.cwd : '/nowhere' };
 }
-function replay(name: string): RunEvent[] {
+function replay(name: string): AgentEvent[] {
   const { messages, workspace } = recorded(name);
   return messages.flatMap(createTranslator(workspace));
 }
-const callsOf = (events: RunEvent[]): ToolCall[] =>
+const callsOf = (events: AgentEvent[]): ToolCall[] =>
   events.flatMap((event) => (event.kind === 'tool-call' ? [event.call] : []));
 /** The last report of each call: what the page ends up showing. */
-const finalCalls = (events: RunEvent[]): ToolCall[] => [
+const finalCalls = (events: AgentEvent[]): ToolCall[] => [
   ...new Map(callsOf(events).map((call) => [call.id, call])).values(),
 ];
 
@@ -147,8 +147,17 @@ describe('Claude Code translator', () => {
     expect(names).not.toContain('ToolSearch');
   });
 
+  it('reports what the run consumed just before its end: every token the model read, and the API cost', () => {
+    const events = replay('success');
+    expect(events.at(-2)).toEqual({
+      kind: 'usage',
+      // Recorded: 31,421 input + 23,918 written to the cache + 83,795 read from it.
+      usage: { inputTokens: 139_134, cachedInputTokens: 83_795, outputTokens: 3422, costUsd: 0.030_474_65 },
+    });
+  });
+
   it('reads a refused model as a failure, although Claude Code calls the result a success', () => {
-    expect(replay('bad-model')).toEqual([
+    expect(replay('bad-model').filter((event) => event.kind !== 'usage')).toEqual([
       {
         kind: 'finished',
         outcome: {

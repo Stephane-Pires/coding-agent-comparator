@@ -1,6 +1,5 @@
 'use client';
 
-import type { Chat } from '@ai-sdk/react';
 import { useCallback, useState } from 'react';
 
 import { AgentId, type Task } from '@comparator/contracts';
@@ -10,23 +9,22 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from '@comparator/ui/components/ai-elements/conversation';
-import { ComparisonView } from '@comparator/ui/components/comparison-view';
 import { PageHeader } from '@comparator/ui/components/page-header';
 import { TaskInput } from '@comparator/ui/components/task-input';
 
-import { startRunChat, type RunMessage } from '../lib/run-chat.ts';
-import { Run } from './run.tsx';
+import { startRunChat } from '../lib/run-chat.ts';
+import { Comparison, type ComparisonRun } from './comparison.tsx';
 import { SAMPLE_TASKS } from './samples.ts';
 
 /** One task, sent to every agent: one run each. */
-interface Comparison {
+interface SentComparison {
   readonly id: string;
   readonly task: Task;
-  readonly runs: readonly { readonly agent: AgentId; readonly chat: Chat<RunMessage> }[];
+  readonly runs: readonly ComparisonRun[];
 }
 
 export function ChatPage() {
-  const [comparisons, setComparisons] = useState<readonly Comparison[]>([]);
+  const [comparisons, setComparisons] = useState<readonly SentComparison[]>([]);
   // How many runs are still in progress. Send and Stop are one button, chosen by this.
   const [inProgress, setInProgress] = useState(0);
 
@@ -42,26 +40,24 @@ export function ChatPage() {
 
   return (
     <div className="flex h-dvh flex-col">
-      <div className="page-frame py-6">
-        <PageHeader
-          title="Compare coding agents"
-          description="Send one task to every agent and watch how each one handles it. Each task is a new comparison: the agents start from an empty folder every time."
-        />
+      <div className="page-frame py-4">
+        <PageHeader title="Compare coding agents" />
       </div>
       <Conversation className="min-h-0 flex-1">
         <ConversationContent className="page-frame gap-8 py-4">
           {comparisons.length === 0 ? (
             <ConversationEmptyState
               title="No comparison yet"
-              description="Write a task below, or pick one of the examples."
+              description="Write a task below, or pick one of the examples. Every agent gets the same task and starts from an empty folder."
             />
           ) : (
             comparisons.map((comparison) => (
-              <ComparisonView key={comparison.id} task={comparison.task}>
-                {comparison.runs.map(({ agent, chat }) => (
-                  <Run key={agent} agent={agent} chat={chat} onSettled={onSettled} />
-                ))}
-              </ComparisonView>
+              <Comparison
+                key={comparison.id}
+                task={comparison.task}
+                runs={comparison.runs}
+                onRunSettled={onSettled}
+              />
             ))
           )}
         </ConversationContent>

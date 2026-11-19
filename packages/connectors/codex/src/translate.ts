@@ -1,6 +1,6 @@
 import type { ThreadEvent, ThreadItem } from '@openai/codex-sdk';
 
-import type { RunEvent, ToolCall, WebSource } from '@comparator/domain';
+import { countTokens, type AgentEvent, type ToolCall, type WebSource } from '@comparator/domain';
 
 /** Codex runs every command through a login shell: `/bin/zsh -lc "<the command>"`. */
 const SHELL_WRAPPER = /^\S*\b(?:zsh|bash|sh) -lc (['"])([\s\S]*)\1$/;
@@ -88,7 +88,7 @@ function toolCalls(item: ThreadItem, ended: boolean, workspacePath: string): Too
  * Dropped: reasoning, to-do lists and warnings; and the top-level `error` event, which Codex emits while it
  * retries (`turn.failed` has the last word).
  */
-export function translate(event: ThreadEvent, workspacePath: string): RunEvent[] {
+export function translate(event: ThreadEvent, workspacePath: string): AgentEvent[] {
   switch (event.type) {
     case 'item.started':
     case 'item.updated':
@@ -100,8 +100,19 @@ export function translate(event: ThreadEvent, workspacePath: string): RunEvent[]
           : [];
       return toolCalls(event.item, ended, workspacePath).map((call) => ({ kind: 'tool-call', call }));
     }
-    case 'turn.completed':
-      return [{ kind: 'finished', outcome: { status: 'succeeded' } }];
+    case 'turn.completed': {
+      // Codex includes cached input in `input_tokens`, and reports no cost.
+      const { input_tokens, cached_input_tokens, output_tokens } = event.usage;
+      const tokens = countTokens({
+        uncachedInput: input_tokens - cached_input_tokens,
+        cachedInput: cached_input_tokens,
+        output: output_tokens,
+      });
+      return [
+        { kind: 'usage', usage: { ...tokens, costUsd: null } },
+        { kind: 'finished', outcome: { status: 'succeeded' } },
+      ];
+    }
     case 'turn.failed':
       return [{ kind: 'finished', outcome: { status: 'failed', reason: event.error.message } }];
     default:

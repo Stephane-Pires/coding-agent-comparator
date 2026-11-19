@@ -1,7 +1,7 @@
 import type { RunChunk } from '@comparator/contracts';
 import type { RunEvent } from '@comparator/domain';
 
-/** Presents a run as the chunks of the API's stream: each message becomes a text part; each tool call, each file and the end a data part. */
+/** Presents a run as the chunks of the API's stream: each message becomes a text part; each tool call, each file, the totals and the end a data part. */
 export async function* present(events: AsyncIterable<RunEvent>): AsyncGenerator<RunChunk, void, void> {
   yield { type: 'start' };
   let messages = 0;
@@ -17,6 +17,8 @@ export async function* present(events: AsyncIterable<RunEvent>): AsyncGenerator<
     } else if (event.kind === 'file') {
       // The file's path: a later chunk for the same file replaces the earlier one on the client.
       yield { type: 'data-file', id: event.file.path, data: event.file };
+    } else if (event.kind === 'metrics') {
+      yield { type: 'data-metrics', data: event.metrics };
     } else {
       yield { type: 'data-outcome', data: event.outcome };
     }

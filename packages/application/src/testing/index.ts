@@ -1,18 +1,25 @@
 import { errAsync, okAsync } from 'neverthrow';
 
-import type { RunEvent, WorkspaceFile } from '@comparator/domain';
+import type { AgentEvent, WorkspaceFile } from '@comparator/domain';
 
+import type { Clock } from '../ports/clock.ts';
 import type { AgentRun, CodingAgent } from '../ports/coding-agent.ts';
 import type { Workspace, WorkspaceProvider } from '../ports/workspace-provider.ts';
 
 /** One step of a scripted agent: an event to yield, an error to throw, or a pause until the run is aborted. */
-export type Step = RunEvent | { readonly throws: Error } | 'wait-for-abort';
+export type Step = AgentEvent | { readonly throws: Error } | 'wait-for-abort';
 
 const aborted = (signal: AbortSignal) =>
   new Promise<void>((resolve) => {
     if (signal.aborted) resolve();
     else signal.addEventListener('abort', () => resolve(), { once: true });
   });
+
+/** A clock that moves forward by `tickMs` each time it is read. */
+export function tickingClock(tickMs: number): Clock {
+  let time = 0;
+  return { now: () => (time += tickMs) };
+}
 
 /** An agent that replays `steps`, and records the runs it was given. */
 export function scriptedAgent(steps: readonly Step[]): CodingAgent & { readonly runs: AgentRun[] } {

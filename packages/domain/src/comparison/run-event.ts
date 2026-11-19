@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { ToolCall } from './tool-call.ts';
+import { Metrics, Usage } from './usage.ts';
 import { WorkspaceFile } from './workspace-file.ts';
 
 /** How a run ended. */
@@ -14,14 +15,32 @@ export type RunOutcome = z.infer<typeof RunOutcome>;
 /** Where a run stands. A run is running until it has an outcome; then its status is that outcome's. */
 export type RunStatus = 'running' | RunOutcome['status'];
 
+const message = z.object({ kind: z.literal('message'), text: z.string() });
+const toolCall = z.object({ kind: z.literal('tool-call'), call: ToolCall });
+const finished = z.object({ kind: z.literal('finished'), outcome: RunOutcome });
+
 /**
- * One thing that happened during a run, in the vocabulary shared by every agent.
+ * One thing an agent reports while it works, in the vocabulary shared by every agent: what it says, the tools it
+ * calls, what it consumed, and how it ended.
+ */
+export const AgentEvent = z.discriminatedUnion('kind', [
+  message,
+  toolCall,
+  z.object({ kind: z.literal('usage'), usage: Usage }),
+  finished,
+]);
+export type AgentEvent = z.infer<typeof AgentEvent>;
+
+/**
+ * One thing that happened during a run: what its agent said and did, and what the run itself observed, which are
+ * the files of the workspace as they change and the run's totals.
  * A run is a sequence of events that ends with exactly one `finished` event.
  */
 export const RunEvent = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('message'), text: z.string() }),
-  z.object({ kind: z.literal('tool-call'), call: ToolCall }),
+  message,
+  toolCall,
   z.object({ kind: z.literal('file'), file: WorkspaceFile }),
-  z.object({ kind: z.literal('finished'), outcome: RunOutcome }),
+  z.object({ kind: z.literal('metrics'), metrics: Metrics }),
+  finished,
 ]);
 export type RunEvent = z.infer<typeof RunEvent>;

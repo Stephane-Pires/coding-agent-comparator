@@ -1,29 +1,36 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { Task, type RunEvent, type WorkspaceFile } from '@comparator/domain';
+import { Task, type AgentEvent, type Metrics, type RunEvent, type WorkspaceFile } from '@comparator/domain';
 
-import { inMemoryWorkspaces, scriptedAgent, type Step } from '../testing/index.ts';
+import { inMemoryWorkspaces, scriptedAgent, tickingClock, type Step } from '../testing/index.ts';
 import { startRun } from './start-run.ts';
 
 const task = Task.parse('write a script');
-const message = (text: string): RunEvent => ({ kind: 'message', text });
-const succeeded: RunEvent = { kind: 'finished', outcome: { status: 'succeeded' } };
-const cancelled: RunEvent = { kind: 'finished', outcome: { status: 'cancelled' } };
-const failed = (reason: string): RunEvent => ({ kind: 'finished', outcome: { status: 'failed', reason } });
+/** An event an agent reports and a run passes on unchanged. */
+type Shared = AgentEvent & RunEvent;
+const message = (text: string): Shared => ({ kind: 'message', text });
+const succeeded: Shared = { kind: 'finished', outcome: { status: 'succeeded' } };
+const cancelled: Shared = { kind: 'finished', outcome: { status: 'cancelled' } };
+const failed = (reason: string): Shared => ({ kind: 'finished', outcome: { status: 'failed', reason } });
 const file = (path: string, content: string): WorkspaceFile => ({ path, content, state: 'complete' });
 const changed = (f: WorkspaceFile): RunEvent => ({ kind: 'file', file: f });
-const call = (status: 'running' | 'succeeded'): RunEvent => ({
+const call = (status: 'running' | 'succeeded', id = 'c1'): Shared => ({
   kind: 'tool-call',
-  call: { id: 'c1', tool: { type: 'command', command: 'node write.mjs' }, status, output: '' },
+  call: { id, tool: { type: 'command', command: 'node write.mjs' }, status, output: '' },
 });
 
 function setup(steps: readonly Step[], workspaces = inMemoryWorkspaces()) {
   const claude = scriptedAgent(steps);
   const codex = scriptedAgent([message('from codex'), succeeded]);
   const controller = new AbortController();
-  const run = startRun({ agents: { 'claude-code': claude, codex }, workspaces });
-  const events = () => Array.fromAsync(run({ agent: 'claude-code', task, signal: controller.signal }));
-  return { claude, codex, workspaces, controller, run, events };
+  // Each reading of the clock is 750 ms after the one before: a run reads it at its start and at its end.
+  const run = startRun({ agents: { 'claude-code': claude, codex }, workspaces, clock: tickingClock(750) });
+  const all = () => Array.fromAsync(run({ agent: 'claude-code', task, signal: controller.signal }));
+  /** The run without its totals, which have their own tests. */
+  const events = async () => (await all()).filter((event) => event.kind !== 'metrics');
+  const metrics = async (): Promise<Metrics[]> =>
+    (await all()).flatMap((event) => (event.kind === 'metrics' ? [event.metrics] : []));
+  return { claude, codex, workspaces, controller, run, all, events, metrics };
 }
 
 describe('startRun', () => {
@@ -153,6 +160,51 @@ describe('startRun', () => {
     it('does not read the workspace of a cancelled run', async () => {
       const workspaces = inMemoryWorkspaces({ reads: [[file('a.mjs', '1')]] });
       const { controller, run } = setup([message('one'), 'wait-for-abort'], workspaces);
+      const seen: RunEvent[] = [];
+      for await (const event of run({ agent: 'claude-code', task, signal: controller.signal })) {
+        seen.push(event);
+        controller.abort();
+      }
+      expect(seen).toEqual([message('one'), cancelled]);
+    });
+  });
+
+  describe('the totals of the run', () => {
+    const usage = { inputTokens: 1200, cachedInputTokens: 800, outputTokens: 90, costUsd: 0.012 };
+
+    it('gives the totals once, just before the end, and keeps the usage out of the run', async () => {
+      const { all } = setup([message('one'), { kind: 'usage', usage }, succeeded]);
+      expect(await all()).toEqual([
+        message('one'),
+        { kind: 'metrics', metrics: { durationMs: 750, usage, toolCalls: 0, files: 0 } },
+        succeeded,
+      ]);
+    });
+
+    it('counts each tool call once, however many times it was reported', async () => {
+      const { metrics } = setup([
+        call('running'),
+        call('succeeded'),
+        call('running', 'c2'),
+        call('succeeded', 'c2'),
+        succeeded,
+      ]);
+      expect(await metrics()).toMatchObject([{ toolCalls: 2 }]);
+    });
+
+    it('counts the files the workspace holds at the end: a deleted file is not one', async () => {
+      const reads = [[file('a.mjs', '1'), file('b.mjs', '2')], [file('b.mjs', '2')]];
+      const { metrics } = setup([call('succeeded'), succeeded], inMemoryWorkspaces({ reads }));
+      expect(await metrics()).toMatchObject([{ files: 1 }]);
+    });
+
+    it('has no usage when the agent reported none, and still the rest, as after a crash', async () => {
+      const { metrics } = setup([call('succeeded'), { throws: new Error('crash') }]);
+      expect(await metrics()).toEqual([{ durationMs: 750, usage: null, toolCalls: 1, files: 0 }]);
+    });
+
+    it('gives no totals for a cancelled run', async () => {
+      const { controller, run } = setup([message('one'), 'wait-for-abort']);
       const seen: RunEvent[] = [];
       for await (const event of run({ agent: 'claude-code', task, signal: controller.signal })) {
         seen.push(event);

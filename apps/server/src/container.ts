@@ -15,6 +15,7 @@ export function createContainer(config: Config): AppDeps {
         codex: codexAgent(config.codex),
       },
       workspaces: localWorkspaces(),
+      clock: { now: () => performance.now() },
     }),
   };
 }

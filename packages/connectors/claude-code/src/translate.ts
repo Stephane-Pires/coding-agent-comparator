@@ -1,6 +1,13 @@
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 
-import type { RunEvent, Tool, ToolCall, WebSource } from '@comparator/domain';
+import {
+  countTokens,
+  type AgentEvent,
+  type Tool,
+  type ToolCall,
+  type Usage,
+  type WebSource,
+} from '@comparator/domain';
 
 /** The model name Claude Code gives to notices it writes itself, such as "Not logged in". */
 const SYNTHETIC_MODEL = '<synthetic>';
@@ -57,7 +64,26 @@ function fileEdit(tool: Extract<Tool, { type: 'file-edit' }>, structured: unknow
   return { ...tool, change: structured['type'] === 'update' ? 'modified' : tool.change, diff };
 }
 
-const toolCall = (call: ToolCall): RunEvent => ({ kind: 'tool-call', call });
+/**
+ * What the run consumed, from the `result` message. Claude Code counts cached input apart from the rest
+ * (`inputTokens`), and what it wrote to the cache apart again; `modelUsage` is the one to read, as `usage` covers
+ * the main loop only. `total_cost_usd` is the cost at API prices, also on a subscription.
+ */
+function usageOf(result: Extract<SDKMessage, { type: 'result' }>): Usage {
+  const models = Object.values(result.modelUsage);
+  const sum = (count: (model: (typeof models)[number]) => number) =>
+    models.reduce((total, model) => total + count(model), 0);
+  return {
+    ...countTokens({
+      uncachedInput: sum((model) => model.inputTokens + model.cacheCreationInputTokens),
+      cachedInput: sum((model) => model.cacheReadInputTokens),
+      output: sum((model) => model.outputTokens),
+    }),
+    costUsd: result.total_cost_usd,
+  };
+}
+
+const toolCall = (call: ToolCall): AgentEvent => ({ kind: 'tool-call', call });
 
 /**
  * Translates Claude Code's stream into run events, for one run.
@@ -68,7 +94,7 @@ const toolCall = (call: ToolCall): RunEvent => ({ kind: 'tool-call', call });
  *
  * Paths inside `workspacePath` are shown relative to it: the folder is temporary and its name means nothing.
  */
-export function createTranslator(workspacePath: string): (message: SDKMessage) => RunEvent[] {
+export function createTranslator(workspacePath: string): (message: SDKMessage) => AgentEvent[] {
   const running = new Map<string, Tool>();
   const relative = (text: string) => text.replaceAll(`${workspacePath}/`, '');
 
@@ -86,7 +112,7 @@ export function createTranslator(workspacePath: string): (message: SDKMessage) =
     if (message.type === 'assistant') {
       // A synthetic notice announces a failure: the `result` that follows carries the same text.
       if (message.message.model === SYNTHETIC_MODEL) return [];
-      return message.message.content.flatMap((block): RunEvent[] => {
+      return message.message.content.flatMap((block): AgentEvent[] => {
         if (block.type === 'text')
           return block.text.trim() === '' ? [] : [{ kind: 'message', text: block.text }];
         if (block.type !== 'tool_use' || HIDDEN_TOOLS.has(block.name)) return [];
@@ -98,7 +124,7 @@ export function createTranslator(workspacePath: string): (message: SDKMessage) =
     if (message.type === 'user') {
       const { content } = message.message;
       if (typeof content === 'string') return [];
-      return content.flatMap((block): RunEvent[] => {
+      return content.flatMap((block): AgentEvent[] => {
         if (block.type !== 'tool_result') return [];
         const tool = running.get(block.tool_use_id);
         if (!tool) return [];
@@ -121,9 +147,10 @@ export function createTranslator(workspacePath: string): (message: SDKMessage) =
     }
     if (message.type === 'result') {
       // `subtype: 'success'` cannot be trusted alone: a refused model is a "success" with `is_error`.
-      if (!message.is_error) return [{ kind: 'finished', outcome: { status: 'succeeded' } }];
+      const usage: AgentEvent = { kind: 'usage', usage: usageOf(message) };
+      if (!message.is_error) return [usage, { kind: 'finished', outcome: { status: 'succeeded' } }];
       const reason = message.subtype === 'success' ? message.result : message.errors.join('\n');
-      return [{ kind: 'finished', outcome: { status: 'failed', reason: reason || message.subtype } }];
+      return [usage, { kind: 'finished', outcome: { status: 'failed', reason: reason || message.subtype } }];
     }
     return [];
   };

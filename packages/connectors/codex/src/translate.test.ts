@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { ThreadEvent } from '@openai/codex-sdk';
 import { describe, expect, it } from 'vite-plus/test';
 
-import type { RunEvent, ToolCall } from '@comparator/domain';
+import type { AgentEvent, ToolCall } from '@comparator/domain';
 
 import { translate, unwrapCommand } from './translate.ts';
 
@@ -18,10 +18,10 @@ function recorded(name: string): ThreadEvent[] {
   return fixture.events.map(({ event }) => event);
 }
 const replay = (name: string) => recorded(name).flatMap((event) => translate(event, WORKSPACE));
-const callsOf = (events: RunEvent[]): ToolCall[] =>
+const callsOf = (events: AgentEvent[]): ToolCall[] =>
   events.flatMap((event) => (event.kind === 'tool-call' ? [event.call] : []));
 /** The last report of each call: what the page ends up showing. */
-const finalCalls = (events: RunEvent[]): ToolCall[] => [
+const finalCalls = (events: AgentEvent[]): ToolCall[] => [
   ...new Map(callsOf(events).map((call) => [call.id, call])).values(),
 ];
 
@@ -95,6 +95,14 @@ describe('Codex translator', () => {
     expect(messages.at(-1)).toBe(
       'Created and ran `hello.mjs`. It printed `Node LTS is 26`. The [official Node.js releases page](https://nodejs.org/en/about/previous-releases) lists v26 as LTS.',
     );
+  });
+
+  it('reports what the run consumed just before its end, with no cost: Codex gives none', () => {
+    expect(replay('success').at(-2)).toEqual({
+      kind: 'usage',
+      // Recorded: 56,186 input tokens, 48,000 of them cached.
+      usage: { inputTokens: 56_186, cachedInputTokens: 48_000, outputTokens: 277, costUsd: null },
+    });
   });
 
   it('reports a refused model once, although Codex announces it twice', () => {

@@ -4,6 +4,7 @@ import { useChat, type Chat } from '@ai-sdk/react';
 import { useEffect } from 'react';
 
 import type { AgentId, RunStatus } from '@comparator/contracts';
+import type { RunResult } from '@comparator/ui/components/comparison-metrics';
 import { RunColumn, type RunItem } from '@comparator/ui/components/run-column';
 
 import type { RunMessage } from '../lib/run-chat.ts';
@@ -12,7 +13,7 @@ import type { RunMessage } from '../lib/run-chat.ts';
 const UNREACHABLE =
   'The run could not be followed: the API did not answer. Check that it is running, then send again.';
 
-/** One agent's run, followed live. Tells its parent once, when the run is over. */
+/** One agent's run, followed live. Tells its parent once, when the run is over: how it ended, and its totals. */
 export function Run({
   agent,
   chat,
@@ -20,7 +21,7 @@ export function Run({
 }: {
   agent: AgentId;
   chat: Chat<RunMessage>;
-  onSettled: () => void;
+  onSettled: (result: RunResult) => void;
 }) {
   const { messages, status: stream } = useChat({ chat });
 
@@ -38,6 +39,8 @@ export function Run({
   // The workspace's files: one that changed has replaced its earlier version in place, as a tool call does.
   const files = parts.flatMap((part) => (part.type === 'data-file' ? [part.data] : []));
   const outcome = parts.find((part) => part.type === 'data-outcome')?.data;
+  // The totals arrive just before the outcome: they are there when the run settles.
+  const metrics = parts.find((part) => part.type === 'data-metrics')?.data;
 
   // A stream that ends with no outcome was stopped by the user; one that breaks never reached the API.
   const status: RunStatus =
@@ -47,7 +50,8 @@ export function Run({
 
   const settled = status !== 'running';
   useEffect(() => {
-    if (settled) onSettled();
+    // Once, when the run settles: its status and totals do not change after that.
+    if (settled) onSettled({ agent, status, metrics });
   }, [settled, onSettled]);
 
   return (
