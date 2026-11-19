@@ -32,6 +32,8 @@ export default defineConfig({
       'typescript/no-misused-promises': 'error',
       'import/no-cycle': 'error',
       eqeqeq: 'error',
+      // A run is a stream: its events are awaited one after the other on purpose.
+      'no-await-in-loop': 'off',
     },
     overrides: [
       {
@@ -71,6 +73,34 @@ export default defineConfig({
         },
       },
       {
+        files: ['packages/connectors/*/src/**', 'packages/workspace-local/src/**'],
+        excludeFiles: ['**/*.test.ts'],
+        rules: {
+          'no-restricted-imports': [
+            'error',
+            {
+              patterns: [
+                {
+                  group: [
+                    '@comparator/*',
+                    '!@comparator/domain',
+                    '!@comparator/application',
+                    'hono',
+                    '@hono/*',
+                    '@orpc/*',
+                    'react',
+                    'react-dom',
+                    'next',
+                  ],
+                  message:
+                    'Hexagonal rule: an adapter depends on the core only, never on another adapter, the API or the UI (see tooling/architecture.ts).',
+                },
+              ],
+            },
+          ],
+        },
+      },
+      {
         files: ['apps/web/src/**', 'packages/ui/src/**'],
         excludeFiles: ['**/*.test.ts', '**/*.test.tsx'],
         rules: {
@@ -102,7 +132,13 @@ export default defineConfig({
       },
       {
         files: ['**/*.test.ts', '**/*.test.tsx'],
-        rules: { 'typescript/no-non-null-assertion': 'off' },
+        rules: {
+          'typescript/no-non-null-assertion': 'off',
+          // Tests load recorded JSON and build deliberately wrong values.
+          'typescript/no-unsafe-type-assertion': 'off',
+          // neverthrow names its test helper `_unsafeUnwrap`.
+          'no-underscore-dangle': 'off',
+        },
       },
     ],
   },

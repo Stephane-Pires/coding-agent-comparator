@@ -6,5 +6,8 @@
   "description": "Pure domain model of a comparison: schemas and rules. Imports only zod and neverthrow.",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
   }
 }

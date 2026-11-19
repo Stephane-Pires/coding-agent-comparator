@@ -6,7 +6,7 @@
  * feedback in the editor.
  */
 
-export type Layer = 'domain' | 'application' | 'contracts' | 'app' | 'ui';
+export type Layer = 'domain' | 'application' | 'contracts' | 'adapter' | 'app' | 'ui';
 
 export interface PackageRule {
   readonly dir: string;
@@ -31,6 +31,15 @@ const SERVER_ONLY = [
   '@vercel/sandbox',
 ];
 const RUNTIME = ['node:'];
+
+/** A driven adapter implements a port: it depends on the core only, never on another adapter, the API or the UI. */
+const adapter = (dir: string): PackageRule => ({
+  dir,
+  layer: 'adapter',
+  internal: ['@comparator/domain', '@comparator/application'],
+  external: ['*'],
+  forbiddenExternal: [...UI_FRAMEWORKS, 'hono', '@hono/', '@orpc/'],
+});
 
 /** UI code reaches the backend only through the oRPC contract. */
 const ui = (dir: string, internal: readonly string[]): PackageRule => ({
@@ -60,6 +69,9 @@ export const RULES: Readonly<Record<string, PackageRule>> = {
     internal: ['@comparator/domain'],
     external: ['zod', '@orpc/contract'],
   },
+  '@comparator/connector-claude-code': adapter('packages/connectors/claude-code'),
+  '@comparator/connector-codex': adapter('packages/connectors/codex'),
+  '@comparator/workspace-local': adapter('packages/workspace-local'),
   '@comparator/ui': ui('packages/ui', ['@comparator/contracts']),
   '@comparator/server': {
     dir: 'apps/server',
@@ -72,5 +84,5 @@ export const RULES: Readonly<Record<string, PackageRule>> = {
 };
 
 /** Layers allowed to use runtime built-ins (`node:*`). */
-export const RUNTIME_LAYERS: ReadonlySet<Layer> = new Set(['app']);
+export const RUNTIME_LAYERS: ReadonlySet<Layer> = new Set(['adapter', 'app']);
 export const RUNTIME_PREFIXES = RUNTIME;

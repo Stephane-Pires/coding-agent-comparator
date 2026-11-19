@@ -1,0 +1,14 @@
+{
+  "name": "@comparator/workspace-local",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Gives each run an empty folder on this machine, outside the repository.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@comparator/application": "workspace:*",
+    "neverthrow": "^8.2.0"
+  }
+}

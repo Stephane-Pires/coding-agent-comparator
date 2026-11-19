@@ -88,6 +88,7 @@ describe('boundary checker itself', () => {
   const contracts = RULES['@comparator/contracts']!;
   const uiPackage = RULES['@comparator/ui']!;
   const server = RULES['@comparator/server']!;
+  const codex = RULES['@comparator/connector-codex']!;
   const web = RULES['@comparator/web']!;
 
   it('extracts static, type-only, side-effect and dynamic imports', () => {
@@ -111,6 +112,10 @@ describe('boundary checker itself', () => {
     ['@anthropic-ai/claude-agent-sdk', web],
     ['node:fs', web],
     ['react', server],
+    ['@comparator/connector-claude-code', codex],
+    ['@comparator/contracts', codex],
+    ['hono', codex],
+    ['@orpc/server', codex],
   ])('rejects %s', (spec, rule) => {
     expect(violation(spec, rule)).not.toBeNull();
   });
@@ -131,6 +136,9 @@ describe('boundary checker itself', () => {
     ['node:fs', server],
     ['hono', server],
     ['@comparator/application', server],
+    ['@comparator/application', codex],
+    ['@openai/codex-sdk', codex],
+    ['node:child_process', codex],
   ])('accepts %s', (spec, rule) => {
     expect(violation(spec, rule)).toBeNull();
   });

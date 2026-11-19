@@ -10,6 +10,7 @@
   },
   "scripts": {
     "prepare": "vp config --no-agent",
+    "dev": "pnpm --filter @comparator/server dev",
     "check": "vp check && vp test run",
     "fix": "vp check --fix",
     "test": "vp test run"

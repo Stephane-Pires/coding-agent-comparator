@@ -6,5 +6,10 @@
   "description": "The oRPC contract of the API: procedures and DTOs derived from the domain.",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@comparator/domain": "workspace:*",
+    "@orpc/contract": "^1.16.4",
+    "zod": "^4.6.7"
   }
 }

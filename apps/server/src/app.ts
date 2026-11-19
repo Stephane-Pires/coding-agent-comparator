@@ -1,0 +1,60 @@
+import { OpenAPIGenerator } from '@orpc/openapi';
+import { OpenAPIHandler } from '@orpc/openapi/fetch';
+import { implement } from '@orpc/server';
+import { RPCHandler } from '@orpc/server/fetch';
+import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
+import { Scalar } from '@scalar/hono-api-reference';
+import { Hono } from 'hono';
+
+import type { StartRun } from '@comparator/application';
+import { contract } from '@comparator/contracts';
+
+import { present } from './presenter.ts';
+
+export interface AppDeps {
+  readonly startRun: StartRun;
+}
+
+/** A request that nobody can cancel still needs a signal. */
+const NEVER_ABORTED = new AbortController().signal;
+
+/**
+ * The HTTP API. One contract, served twice: `/rpc` for the typed client of the web app, `/api` as plain REST.
+ * `/openapi.json` is generated from the same contract, and `/docs` shows it.
+ */
+export function createApp({ startRun }: AppDeps): Hono {
+  const router = implement(contract).router({
+    runs: {
+      start: implement(contract).runs.start.handler(({ input, signal }) =>
+        present(startRun({ ...input, signal: signal ?? NEVER_ABORTED })),
+      ),
+    },
+  });
+  const rpc = new RPCHandler(router);
+  const rest = new OpenAPIHandler(router);
+  const openapi = new OpenAPIGenerator({ schemaConverters: [new ZodToJsonSchemaConverter()] });
+
+  const app = new Hono();
+  app.use('/rpc/*', async (c, next) => {
+    const { matched, response } = await rpc.handle(c.req.raw, { prefix: '/rpc' });
+    return matched ? c.newResponse(response.body, response) : next();
+  });
+  app.use('/api/*', async (c, next) => {
+    const { matched, response } = await rest.handle(c.req.raw, { prefix: '/api' });
+    return matched ? c.newResponse(response.body, response) : next();
+  });
+  app.get('/openapi.json', async (c) =>
+    c.json(
+      await openapi.generate(router, {
+        info: {
+          title: 'Coding Agent Comparator API',
+          version: '0.0.0',
+          description: 'Send one task to several coding agents and watch how each performs.',
+        },
+        servers: [{ url: '/api' }],
+      }),
+    ),
+  );
+  app.get('/docs', Scalar({ url: '/openapi.json', pageTitle: 'Coding Agent Comparator API' }));
+  return app;
+}

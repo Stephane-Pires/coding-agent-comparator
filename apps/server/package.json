@@ -3,8 +3,25 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Composition root of the API: oRPC on Hono, OpenAPI on Scalar.",
-  "exports": {
-    ".": "./src/index.ts"
+  "description": "The API: composition root, oRPC on Hono, OpenAPI on Scalar.",
+  "scripts": {
+    "dev": "node --watch src/main.ts",
+    "start": "node src/main.ts"
+  },
+  "dependencies": {
+    "@comparator/application": "workspace:*",
+    "@comparator/connector-claude-code": "workspace:*",
+    "@comparator/connector-codex": "workspace:*",
+    "@comparator/contracts": "workspace:*",
+    "@comparator/domain": "workspace:*",
+    "@comparator/workspace-local": "workspace:*",
+    "@hono/node-server": "^2.1.9",
+    "@orpc/openapi": "^1.16.4",
+    "@orpc/server": "^1.16.4",
+    "@orpc/zod": "^1.16.4",
+    "@scalar/hono-api-reference": "^0.12.22",
+    "hono": "^4.13.19",
+    "neverthrow": "^8.2.0",
+    "zod": "^4.6.7"
   }
 }

@@ -5,6 +5,11 @@
   "type": "module",
   "description": "Use cases and the ports they need. Imports only the domain and neverthrow.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "dependencies": {
+    "@comparator/domain": "workspace:*",
+    "neverthrow": "^8.2.0"
   }
 }
