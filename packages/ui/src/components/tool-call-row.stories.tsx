@@ -93,6 +93,36 @@ export const WebSearchDone: Story = {
   },
 };
 
+/** A file the agent created: one line, the file itself is in the Files section. */
+export const FileCreated: Story = {
+  args: { call: call({ tool: { type: 'file-edit', path: 'src/math.mjs', change: 'created', diff: '' } }) },
+};
+
+/** A file the agent changed: the row opens on the change, when the agent reported it. */
+export const FileModified: Story = {
+  args: {
+    call: call({
+      tool: {
+        type: 'file-edit',
+        path: 'src/math.mjs',
+        change: 'modified',
+        diff: '@@ -1,3 +1,3 @@\n-export function add(a, b) {\n+export function sum(a, b) {\n   return a + b;\n }',
+      },
+    }),
+  },
+};
+
+/** An edit that failed says why. */
+export const FileEditFailed: Story = {
+  args: {
+    call: call({
+      tool: { type: 'file-edit', path: 'src/math.mjs', change: 'modified', diff: '' },
+      status: 'failed',
+      output: 'String to replace not found in file.',
+    }),
+  },
+};
+
 /** Any tool that is neither a command nor a search: its name and what it was pointed at. */
 export const OtherTool: Story = {
   args: {

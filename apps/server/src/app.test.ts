@@ -5,8 +5,7 @@ import { inMemoryWorkspaces, scriptedAgent, type Step } from '@comparator/applic
 
 import { createApp } from './app.ts';
 
-function setup(claudeSteps: readonly Step[]) {
-  const workspaces = inMemoryWorkspaces();
+function setup(claudeSteps: readonly Step[], workspaces = inMemoryWorkspaces()) {
   const claude = scriptedAgent(claudeSteps);
   const codex = scriptedAgent([
     { kind: 'message', text: 'from codex' },
@@ -76,6 +75,21 @@ describe('POST /api/runs', () => {
         id: 'call-1',
         data: { id: 'call-1', tool, status: 'succeeded', output: 'hi\n' },
       },
+      { type: 'data-outcome', data: { status: 'succeeded' } },
+      { type: 'finish' },
+    ]);
+  });
+
+  it('streams each file the run left as a data part with its path, before the outcome', async () => {
+    const file = { path: 'src/hello.mjs', content: 'console.log(1);\n', state: 'complete' } as const;
+    const { post } = setup(
+      [{ kind: 'finished', outcome: { status: 'succeeded' } }],
+      inMemoryWorkspaces({ reads: [[file]] }),
+    );
+    const response = await post('/api/runs', { agent: 'claude-code', task: 'say hi' });
+    expect(await chunks(response)).toEqual([
+      { type: 'start' },
+      { type: 'data-file', id: 'src/hello.mjs', data: file },
       { type: 'data-outcome', data: { status: 'succeeded' } },
       { type: 'finish' },
     ]);

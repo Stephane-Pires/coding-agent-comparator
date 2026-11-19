@@ -1,6 +1,6 @@
 import { errAsync, okAsync } from 'neverthrow';
 
-import type { RunEvent } from '@comparator/domain';
+import type { RunEvent, WorkspaceFile } from '@comparator/domain';
 
 import type { AgentRun, CodingAgent } from '../ports/coding-agent.ts';
 import type { Workspace, WorkspaceProvider } from '../ports/workspace-provider.ts';
@@ -30,13 +30,19 @@ export function scriptedAgent(steps: readonly Step[]): CodingAgent & { readonly 
   };
 }
 
-/** Workspaces that exist only as names, and remember whether they were disposed of. */
-export function inMemoryWorkspaces(options: { readonly failWith?: string } = {}): WorkspaceProvider & {
+/**
+ * Workspaces that exist only as names, and remember whether they were disposed of. Each read gives the next entry
+ * of `reads`, then the last one again; with no `reads`, a workspace stays empty.
+ */
+export function inMemoryWorkspaces(
+  options: { readonly failWith?: string; readonly reads?: readonly (readonly WorkspaceFile[])[] } = {},
+): WorkspaceProvider & {
   readonly created: Workspace[];
   readonly disposed: Workspace[];
 } {
   const created: Workspace[] = [];
   const disposed: Workspace[] = [];
+  let reads = 0;
   return {
     created,
     disposed,
@@ -46,6 +52,10 @@ export function inMemoryWorkspaces(options: { readonly failWith?: string } = {})
       const workspace = { path: `/workspaces/${created.length + 1}` };
       created.push(workspace);
       return okAsync(workspace);
+    },
+    read() {
+      const { reads: script = [] } = options;
+      return Promise.resolve(script[Math.min(reads++, script.length - 1)] ?? []);
     },
     dispose(workspace) {
       disposed.push(workspace);

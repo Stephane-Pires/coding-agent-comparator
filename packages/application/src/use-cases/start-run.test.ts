@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { Task, type RunEvent } from '@comparator/domain';
+import { Task, type RunEvent, type WorkspaceFile } from '@comparator/domain';
 
 import { inMemoryWorkspaces, scriptedAgent, type Step } from '../testing/index.ts';
 import { startRun } from './start-run.ts';
@@ -10,6 +10,12 @@ const message = (text: string): RunEvent => ({ kind: 'message', text });
 const succeeded: RunEvent = { kind: 'finished', outcome: { status: 'succeeded' } };
 const cancelled: RunEvent = { kind: 'finished', outcome: { status: 'cancelled' } };
 const failed = (reason: string): RunEvent => ({ kind: 'finished', outcome: { status: 'failed', reason } });
+const file = (path: string, content: string): WorkspaceFile => ({ path, content, state: 'complete' });
+const changed = (f: WorkspaceFile): RunEvent => ({ kind: 'file', file: f });
+const call = (status: 'running' | 'succeeded'): RunEvent => ({
+  kind: 'tool-call',
+  call: { id: 'c1', tool: { type: 'command', command: 'node write.mjs' }, status, output: '' },
+});
 
 function setup(steps: readonly Step[], workspaces = inMemoryWorkspaces()) {
   const claude = scriptedAgent(steps);
@@ -96,6 +102,64 @@ describe('startRun', () => {
     const { workspaces, events } = setup(steps);
     await events();
     expect(workspaces.disposed).toEqual(workspaces.created);
+  });
+
+  describe('the files of the workspace', () => {
+    it('yields the files that changed after each tool call that ended, and before the end', async () => {
+      const a1 = file('a.mjs', '1');
+      const a2 = file('a.mjs', '2');
+      const b = file('src/b.mjs', 'b');
+      const { events } = setup(
+        [call('running'), call('succeeded'), message('done'), succeeded],
+        inMemoryWorkspaces({ reads: [[a1], [a2, b]] }),
+      );
+      expect(await events()).toEqual([
+        call('running'),
+        call('succeeded'),
+        changed(a1),
+        message('done'),
+        changed(a2),
+        changed(b),
+        succeeded,
+      ]);
+    });
+
+    it('yields a file once while it does not change', async () => {
+      const a = file('a.mjs', '1');
+      const { events } = setup([call('succeeded'), succeeded], inMemoryWorkspaces({ reads: [[a]] }));
+      expect(await events()).toEqual([call('succeeded'), changed(a), succeeded]);
+    });
+
+    it('yields a file that is gone once more, as deleted', async () => {
+      const a = file('a.mjs', '1');
+      const { events } = setup([call('succeeded'), succeeded], inMemoryWorkspaces({ reads: [[a], []] }));
+      expect(await events()).toEqual([
+        call('succeeded'),
+        changed(a),
+        changed({ path: 'a.mjs', content: '', state: 'deleted' }),
+        succeeded,
+      ]);
+    });
+
+    it.each<[string, readonly Step[], RunEvent]>([
+      ['failed', [failed('no')], failed('no')],
+      ['crashed', [{ throws: new Error('crash') }], failed('crash')],
+    ])('still yields the files left by a run that %s', async (_label, steps, end) => {
+      const a = file('a.mjs', '1');
+      const { events } = setup(steps, inMemoryWorkspaces({ reads: [[a]] }));
+      expect(await events()).toEqual([changed(a), end]);
+    });
+
+    it('does not read the workspace of a cancelled run', async () => {
+      const workspaces = inMemoryWorkspaces({ reads: [[file('a.mjs', '1')]] });
+      const { controller, run } = setup([message('one'), 'wait-for-abort'], workspaces);
+      const seen: RunEvent[] = [];
+      for await (const event of run({ agent: 'claude-code', task, signal: controller.signal })) {
+        seen.push(event);
+        controller.abort();
+      }
+      expect(seen).toEqual([message('one'), cancelled]);
+    });
   });
 
   it('disposes of the workspace when the reader stops listening', async () => {

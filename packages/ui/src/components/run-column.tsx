@@ -1,6 +1,7 @@
-import type { AgentId, RunStatus, ToolCall } from '@comparator/contracts';
+import type { AgentId, RunStatus, ToolCall, WorkspaceFile } from '@comparator/contracts';
 import { AGENT_LABELS } from '@comparator/ui/agents';
 import { Message, MessageContent, MessageResponse } from '@comparator/ui/components/ai-elements/message';
+import { RunFiles } from '@comparator/ui/components/run-files';
 import { RunStatusBadge } from '@comparator/ui/components/run-status-badge';
 import { ToolCallRow } from '@comparator/ui/components/tool-call-row';
 import { ICONS } from '@comparator/ui/icons';
@@ -15,6 +16,8 @@ export interface RunColumnProps {
   readonly status: RunStatus;
   /** What the agent said and did so far, in order. */
   readonly items: readonly RunItem[];
+  /** The files of the agent's workspace, as they stand now. */
+  readonly files?: readonly WorkspaceFile[] | undefined;
   /** Why the run failed, in the agent's own words. */
   readonly failureReason?: string | undefined;
 }
@@ -36,7 +39,7 @@ function blocksOf(items: readonly RunItem[]): Block[] {
 }
 
 /** One agent's run: who it is, where the run stands, and what the agent said and did. */
-export function RunColumn({ agent, status, items, failureReason }: RunColumnProps) {
+export function RunColumn({ agent, status, items, files = [], failureReason }: RunColumnProps) {
   const Icon = ICONS.agent[agent];
   const label = AGENT_LABELS[agent];
   return (
@@ -66,6 +69,7 @@ export function RunColumn({ agent, status, items, failureReason }: RunColumnProp
       {status === 'failed' && failureReason ? (
         <p className="text-sm text-destructive">{failureReason}</p>
       ) : null}
+      {files.some((file) => file.state !== 'deleted') ? <RunFiles files={files} /> : null}
     </section>
   );
 }

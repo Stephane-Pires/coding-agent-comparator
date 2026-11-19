@@ -1,6 +1,7 @@
 'use client';
 
 import type { Tool, ToolCall } from '@comparator/contracts';
+import { MessageResponse } from '@comparator/ui/components/ai-elements/message';
 import {
   Source,
   Sources,
@@ -23,9 +24,19 @@ const STATUSES: Record<ToolCall['status'], { label: string; tone: string }> = {
   failed: { label: 'Failed', tone: 'text-destructive' },
 };
 
-/** What a call is shown as on its one line: what the agent ran, searched or used. */
-function titleOf(tool: Tool): { text: string; code: boolean } {
+const CHANGES = { created: 'Created', modified: 'Modified', deleted: 'Deleted' } as const;
+
+/** A diff as a code block of an agent's message, so it gets the same colours as the code the agents quote. */
+function diffBlock(diff: string): string {
+  // A fence longer than any run of backticks in the diff.
+  const fence = '`'.repeat(Math.max(3, ...[...diff.matchAll(/`+/g)].map(([run]) => run.length + 1)));
+  return `${fence}diff\n${diff}\n${fence}`;
+}
+
+/** What a call is shown as on its one line: what the agent ran, searched, edited or used. */
+function titleOf(tool: Tool): { text: string; code: boolean; before?: string } {
   if (tool.type === 'command') return { text: tool.command, code: true };
+  if (tool.type === 'file-edit') return { text: tool.path, code: true, before: CHANGES[tool.change] };
   if (tool.type === 'web-search') return { text: tool.query || 'Searching the web', code: false };
   return { text: tool.input ? `${tool.name} ${tool.input}` : tool.name, code: false };
 }
@@ -43,7 +54,8 @@ function Status({ status }: { status: ToolCall['status'] }) {
 
 /**
  * One tool call of an agent, on one line: what it is, and whether it is done. A command or another tool opens to
- * show its full text and what it printed; a web search lists the pages it found.
+ * show its full text and what it printed; a file edit, the change when the agent reported it; a web search lists
+ * the pages it found.
  */
 export function ToolCallRow({ call }: { call: ToolCall }) {
   const { tool, status, output } = call;
@@ -52,6 +64,7 @@ export function ToolCallRow({ call }: { call: ToolCall }) {
   const line = (
     <>
       <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+      {title.before ? <span className="shrink-0">{title.before}</span> : null}
       <span className={cn('min-w-0 flex-1 truncate text-left', title.code && 'font-mono text-xs')}>
         {title.text}
       </span>
@@ -78,7 +91,8 @@ export function ToolCallRow({ call }: { call: ToolCall }) {
   }
 
   const multiline = tool.type === 'command' && tool.command.includes('\n');
-  if (output === '' && !multiline)
+  const diff = tool.type === 'file-edit' ? tool.diff : '';
+  if (output === '' && !multiline && diff === '')
     return <div className="flex items-center gap-2 px-3 py-2 text-sm">{line}</div>;
 
   return (
@@ -92,6 +106,7 @@ export function ToolCallRow({ call }: { call: ToolCall }) {
       </CollapsibleTrigger>
       <CollapsibleContent className="flex flex-col gap-2 px-3 pb-3">
         {multiline ? <Terminal output={tool.command} aria-label="Command" /> : null}
+        {diff === '' ? null : <MessageResponse>{diffBlock(diff)}</MessageResponse>}
         {output === '' ? null : <Terminal output={output} isStreaming={status === 'running'} />}
       </CollapsibleContent>
     </Collapsible>

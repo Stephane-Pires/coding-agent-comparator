@@ -27,6 +27,9 @@ Everything else stays black, white and greys, with two tones for the state of a 
 One stated exception: **what a command printed is shown as a terminal**, light text on a near-black panel in both
 themes, with the colours the command itself used. It is the command's output, not the app's palette.
 
+A second one: **code keeps its syntax colours**, the same set (GitHub's light and dark themes) in a snippet of an
+agent's message and in the file viewer, so both read as one product.
+
 Red is for errors only. The quiet action (Stop) is a bordered button, never pink and never red, so an action never
 reads as a warning.
 

@@ -38,7 +38,7 @@ export function codexAgent({ model, apiKey }: CodexOptions): CodingAgent {
         webSearchMode: 'live',
       });
       const { events } = await thread.runStreamed(task, { signal });
-      for await (const event of events) yield* translate(event);
+      for await (const event of events) yield* translate(event, workspace.path);
     },
   };
 }

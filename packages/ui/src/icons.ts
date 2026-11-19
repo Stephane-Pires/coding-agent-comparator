@@ -5,6 +5,7 @@ import {
   ChevronDown,
   CircleCheck,
   CircleX,
+  FilePen,
   Globe,
   Hexagon,
   LoaderCircle,
@@ -33,6 +34,7 @@ export const ICONS = {
   tool: {
     command: SquareTerminal,
     'web-search': Globe,
+    'file-edit': FilePen,
     other: Wrench,
   } satisfies Record<Tool['type'], LucideIcon>,
   toolCall: {

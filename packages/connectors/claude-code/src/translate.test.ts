@@ -79,9 +79,30 @@ describe('Claude Code translator', () => {
     const others = finalCalls(replay('edit')).flatMap((call) =>
       call.tool.type === 'other' ? [call.tool] : [],
     );
-    expect(others).toContainEqual({ type: 'other', name: 'Write', input: 'math.mjs' });
     expect(others).toContainEqual({ type: 'other', name: 'Read', input: 'math.mjs' });
     expect(others.map((tool) => tool.name)).toContain('Grep');
+  });
+
+  it('shows a written file as created, and an edit as modified with its change as a diff', () => {
+    const edits = finalCalls(replay('edit')).flatMap((call) =>
+      call.tool.type === 'file-edit' ? [{ ...call.tool, status: call.status, output: call.output }] : [],
+    );
+    expect(edits.map(({ path, change, status, output }) => ({ path, change, status, output }))).toEqual([
+      { path: 'math.mjs', change: 'created', status: 'succeeded', output: '' },
+      { path: 'math.test.mjs', change: 'created', status: 'succeeded', output: '' },
+      { path: 'math.mjs', change: 'modified', status: 'succeeded', output: '' },
+      { path: 'math.test.mjs', change: 'modified', status: 'succeeded', output: '' },
+    ]);
+    expect(edits[0]?.diff).toBe('');
+    expect(edits[2]?.diff).toBe(
+      [
+        '@@ -1,3 +1,3 @@',
+        '-export function add(a, b) {',
+        '+export function sum(a, b) {',
+        '   return a + b;',
+        ' }',
+      ].join('\n'),
+    );
   });
 
   // No recording has a failed call: Claude Code's `sed` in the edit run exited with 0. This one is hand-made.
@@ -115,7 +136,7 @@ describe('Claude Code translator', () => {
     ].flatMap((message) => translate(message as unknown as SDKMessage));
     expect(callsOf(events).map((toolCall) => toolCall.tool)).toEqual([
       { type: 'command', command: 'node version.mjs' },
-      { type: 'other', name: 'Write', input: 'src/version.mjs' },
+      { type: 'file-edit', path: 'src/version.mjs', change: 'created', diff: '' },
     ]);
   });
 

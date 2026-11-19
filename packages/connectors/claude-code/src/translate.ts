@@ -36,6 +36,27 @@ function webSources(structured: unknown): WebSource[] {
     );
 }
 
+/** The tools Claude Code edits files with, and what each does to a file unless its result says otherwise. */
+const FILE_TOOLS: Record<string, 'created' | 'modified'> = { Write: 'created', Edit: 'modified' };
+
+/**
+ * What a file tool's structured result adds to the call: whether `Write` replaced a file that existed
+ * (`type: 'update'`), and the change as a unified diff, from `structuredPatch` (empty for a new file).
+ */
+function fileEdit(tool: Extract<Tool, { type: 'file-edit' }>, structured: unknown): Tool {
+  if (!isRecord(structured)) return tool;
+  const hunks: unknown[] = Array.isArray(structured['structuredPatch']) ? structured['structuredPatch'] : [];
+  const lines: string[] = [];
+  for (const hunk of hunks) {
+    if (!isRecord(hunk) || !Array.isArray(hunk['lines'])) continue;
+    const { oldStart, oldLines, newStart, newLines } = hunk;
+    lines.push(`@@ -${String(oldStart)},${String(oldLines)} +${String(newStart)},${String(newLines)} @@`);
+    lines.push(...hunk['lines'].map(textOf));
+  }
+  const diff = lines.join('\n');
+  return { ...tool, change: structured['type'] === 'update' ? 'modified' : tool.change, diff };
+}
+
 const toolCall = (call: ToolCall): RunEvent => ({ kind: 'tool-call', call });
 
 /**
@@ -55,6 +76,8 @@ export function createTranslator(workspacePath: string): (message: SDKMessage) =
     const fields = isRecord(input) ? input : {};
     if (name === 'Bash') return { type: 'command', command: relative(textOf(fields['command'])) };
     if (name === 'WebSearch') return { type: 'web-search', query: textOf(fields['query']), sources: [] };
+    const change = FILE_TOOLS[name];
+    if (change) return { type: 'file-edit', path: relative(textOf(fields['file_path'])), change, diff: '' };
     const subject = INPUT_SUBJECTS.map((key) => fields[key]).find((value) => typeof value === 'string');
     return { type: 'other', name, input: relative(textOf(subject) || JSON.stringify(fields)) };
   };
@@ -81,17 +104,19 @@ export function createTranslator(workspacePath: string): (message: SDKMessage) =
         if (!tool) return [];
         running.delete(block.tool_use_id);
         const status = block.is_error ? 'failed' : 'succeeded';
+        const call = (ended: Tool, output: string) => [
+          toolCall({ id: block.tool_use_id, tool: ended, status, output }),
+        ];
         // A search's result text is a dump of its links: the links are shown as sources instead.
-        return tool.type === 'web-search'
-          ? [
-              toolCall({
-                id: block.tool_use_id,
-                tool: { ...tool, sources: webSources(message.tool_use_result) },
-                status,
-                output: '',
-              }),
-            ]
-          : [toolCall({ id: block.tool_use_id, tool, status, output: resultText(block.content) })];
+        if (tool.type === 'web-search')
+          return call({ ...tool, sources: webSources(message.tool_use_result) }, '');
+        // An edit's result text only repeats the path; a failed one says why.
+        if (tool.type === 'file-edit')
+          return call(
+            fileEdit(tool, message.tool_use_result),
+            block.is_error ? resultText(block.content) : '',
+          );
+        return call(tool, resultText(block.content));
       });
     }
     if (message.type === 'result') {

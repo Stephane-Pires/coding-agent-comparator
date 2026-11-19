@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { ToolCall } from './tool-call.ts';
+import { WorkspaceFile } from './workspace-file.ts';
 
 /** How a run ended. */
 export const RunOutcome = z.discriminatedUnion('status', [
@@ -20,6 +21,7 @@ export type RunStatus = 'running' | RunOutcome['status'];
 export const RunEvent = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('message'), text: z.string() }),
   z.object({ kind: z.literal('tool-call'), call: ToolCall }),
+  z.object({ kind: z.literal('file'), file: WorkspaceFile }),
   z.object({ kind: z.literal('finished'), outcome: RunOutcome }),
 ]);
 export type RunEvent = z.infer<typeof RunEvent>;

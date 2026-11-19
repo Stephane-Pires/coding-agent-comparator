@@ -30,42 +30,75 @@ function webSources(item: object): WebSource[] {
   );
 }
 
-/** A tool call as it stands in this item, or nothing for the items that are not tool calls. */
-function toolCall(item: ThreadItem, ended: boolean): ToolCall | undefined {
+const CHANGES = { add: 'created', update: 'modified', delete: 'deleted' } as const;
+
+/**
+ * Codex ends its answers with links to the files it wrote, by their full path: `[main.mjs](/tmp/…/main.mjs)`.
+ * The workspace is temporary, so such a link leads nowhere: it becomes the file's name, and any other mention of
+ * the workspace's path is dropped. The files themselves are shown from the workspace.
+ */
+function withoutWorkspace(text: string, workspacePath: string): string {
+  const path = workspacePath.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+  const links = new RegExp(String.raw`\[([^\]]*)\]\(${path}/[^)]*\)`, 'g');
+  return text
+    .replaceAll(links, (_link, label: string) => `\`${label.replaceAll('`', '')}\``)
+    .replaceAll(`${workspacePath}/`, '');
+}
+
+/** The tool calls of this item as they stand, or none for the items that are not tool calls. */
+function toolCalls(item: ThreadItem, ended: boolean, workspacePath: string): ToolCall[] {
   if (item.type === 'command_execution') {
     const status =
       item.status === 'in_progress' ? 'running' : item.status === 'completed' ? 'succeeded' : 'failed';
-    return {
-      id: item.id,
-      tool: { type: 'command', command: unwrapCommand(item.command) },
-      status,
-      output: item.aggregated_output,
-    };
+    return [
+      {
+        id: item.id,
+        tool: { type: 'command', command: unwrapCommand(item.command) },
+        status,
+        output: item.aggregated_output,
+      },
+    ];
   }
   if (item.type === 'web_search') {
     const tool = { type: 'web-search' as const, query: item.query, sources: webSources(item) };
-    return { id: item.id, tool, status: ended ? 'succeeded' : 'running', output: '' };
+    return [{ id: item.id, tool, status: ended ? 'succeeded' : 'running', output: '' }];
   }
-  return undefined;
+  if (item.type === 'file_change') {
+    const status = !ended ? 'running' : item.status === 'failed' ? 'failed' : 'succeeded';
+    // One item can change several files: each is its own call. Codex gives the paths, not the content.
+    return item.changes.map((change) => ({
+      id: `${item.id}:${change.path}`,
+      tool: {
+        type: 'file-edit',
+        path: change.path.replace(`${workspacePath}/`, ''),
+        change: CHANGES[change.kind],
+        diff: '',
+      },
+      status,
+      output: '',
+    }));
+  }
+  return [];
 }
 
 /**
  * Translates one event of Codex's stream into run events. Pure: no state between events, because Codex reports
  * a tool call whole each time, when it starts and when it ends.
  *
- * Dropped: reasoning, to-do lists and warnings; file changes, which this slice does not show yet; and the
- * top-level `error` event, which Codex emits while it retries (`turn.failed` has the last word).
+ * Dropped: reasoning, to-do lists and warnings; and the top-level `error` event, which Codex emits while it
+ * retries (`turn.failed` has the last word).
  */
-export function translate(event: ThreadEvent): RunEvent[] {
+export function translate(event: ThreadEvent, workspacePath: string): RunEvent[] {
   switch (event.type) {
     case 'item.started':
     case 'item.updated':
     case 'item.completed': {
       const ended = event.type === 'item.completed';
       if (event.item.type === 'agent_message')
-        return ended && event.item.text.trim() !== '' ? [{ kind: 'message', text: event.item.text }] : [];
-      const call = toolCall(event.item, ended);
-      return call ? [{ kind: 'tool-call', call }] : [];
+        return ended && event.item.text.trim() !== ''
+          ? [{ kind: 'message', text: withoutWorkspace(event.item.text, workspacePath) }]
+          : [];
+      return toolCalls(event.item, ended, workspacePath).map((call) => ({ kind: 'tool-call', call }));
     }
     case 'turn.completed':
       return [{ kind: 'finished', outcome: { status: 'succeeded' } }];

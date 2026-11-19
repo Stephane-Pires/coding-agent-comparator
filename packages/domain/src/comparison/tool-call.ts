@@ -8,6 +8,14 @@ export type WebSource = z.infer<typeof WebSource>;
 export const Tool = z.discriminatedUnion('type', [
   z.object({ type: z.literal('command'), command: z.string() }),
   z.object({ type: z.literal('web-search'), query: z.string(), sources: z.array(WebSource) }),
+  // A file the agent says it wrote, changed or removed. `diff` is the change as a unified diff when the agent
+  // reports one, else empty. A hint only: the workspace's files say what a run really left.
+  z.object({
+    type: z.literal('file-edit'),
+    path: z.string(),
+    change: z.enum(['created', 'modified', 'deleted']),
+    diff: z.string(),
+  }),
   /** Any other tool: its name as the agent calls it, and its input in a few words. */
   z.object({ type: z.literal('other'), name: z.string(), input: z.string() }),
 ]);

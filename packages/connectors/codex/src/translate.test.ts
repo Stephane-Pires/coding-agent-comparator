@@ -9,12 +9,15 @@ import type { RunEvent, ToolCall } from '@comparator/domain';
 import { translate, unwrapCommand } from './translate.ts';
 
 /** A recording of a real run (docs/spike-findings.md). */
+const WORKSPACE = '/workspace';
+/** A recording of a real run, its temporary folder renamed to `WORKSPACE`. */
 function recorded(name: string): ThreadEvent[] {
   const path = join(import.meta.dirname, '../../../../fixtures/codex', `${name}.json`);
-  const fixture = JSON.parse(readFileSync(path, 'utf8')) as { events: { event: ThreadEvent }[] };
+  const json = readFileSync(path, 'utf8').replaceAll(/\/tmp\/spike-codex-\w+/g, WORKSPACE);
+  const fixture = JSON.parse(json) as { events: { event: ThreadEvent }[] };
   return fixture.events.map(({ event }) => event);
 }
-const replay = (name: string) => recorded(name).flatMap(translate);
+const replay = (name: string) => recorded(name).flatMap((event) => translate(event, WORKSPACE));
 const callsOf = (events: RunEvent[]): ToolCall[] =>
   events.flatMap((event) => (event.kind === 'tool-call' ? [event.call] : []));
 /** The last report of each call: what the page ends up showing. */
@@ -78,10 +81,19 @@ describe('Codex translator', () => {
     expect(calls.filter((call) => call.status === 'running')).toEqual([]);
   });
 
-  it('drops what it does not show yet: file changes', () => {
-    const events = replay('patch');
-    expect(events.every((event) => event.kind !== 'tool-call' || event.call.tool.type === 'command')).toBe(
-      true,
+  it('shows a file change by its path in the workspace: created, then modified', () => {
+    const edits = finalCalls(replay('patch')).filter((call) => call.tool.type === 'file-edit');
+    expect(edits.map(({ tool, status }) => ({ tool, status }))).toEqual([
+      { tool: { type: 'file-edit', path: 'note.txt', change: 'created', diff: '' }, status: 'succeeded' },
+      { tool: { type: 'file-edit', path: 'note.txt', change: 'modified', diff: '' }, status: 'succeeded' },
+    ]);
+    expect(callsOf(replay('patch')).filter((call) => call.tool.type === 'file-edit')).toHaveLength(4);
+  });
+
+  it('names a file where Codex links to it in the temporary workspace, and keeps a link to the web', () => {
+    const messages = replay('success').flatMap((event) => (event.kind === 'message' ? [event.text] : []));
+    expect(messages.at(-1)).toBe(
+      'Created and ran `hello.mjs`. It printed `Node LTS is 26`. The [official Node.js releases page](https://nodejs.org/en/about/previous-releases) lists v26 as LTS.',
     );
   });
 
@@ -102,6 +114,6 @@ describe('Codex translator', () => {
   });
 
   it('ignores an event it does not know', () => {
-    expect(translate({ type: 'something.new' } as unknown as ThreadEvent)).toEqual([]);
+    expect(translate({ type: 'something.new' } as unknown as ThreadEvent, WORKSPACE)).toEqual([]);
   });
 });

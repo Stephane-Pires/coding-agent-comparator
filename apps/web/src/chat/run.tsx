@@ -35,6 +35,8 @@ export function Run({
     if (part.type === 'data-tool-call') return [{ type: 'tool-call', call: part.data }];
     return [];
   });
+  // The workspace's files: one that changed has replaced its earlier version in place, as a tool call does.
+  const files = parts.flatMap((part) => (part.type === 'data-file' ? [part.data] : []));
   const outcome = parts.find((part) => part.type === 'data-outcome')?.data;
 
   // A stream that ends with no outcome was stopped by the user; one that breaks never reached the API.
@@ -48,5 +50,7 @@ export function Run({
     if (settled) onSettled();
   }, [settled, onSettled]);
 
-  return <RunColumn agent={agent} status={status} items={items} failureReason={failureReason} />;
+  return (
+    <RunColumn agent={agent} status={status} items={items} files={files} failureReason={failureReason} />
+  );
 }
