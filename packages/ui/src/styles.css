@@ -173,6 +173,55 @@
     stroke-dashoffset: 0;
   }
 }
+/* One flake of the pink snow (components/snowfall.tsx): it falls the height of the page once, drifting sideways. */
+@keyframes snow-fall {
+  from {
+    transform: translate3d(0, -5vh, 0);
+    opacity: var(--shade);
+  }
+  /* A flake keeps its shade most of the way down, and melts near the bottom. */
+  75% {
+    opacity: var(--shade);
+  }
+  to {
+    transform: translate3d(var(--drift), 105vh, 0);
+    opacity: 0;
+  }
+}
+.snowflake {
+  position: absolute;
+  top: 0;
+  border-radius: 9999px;
+  /* `both`: a flake waits above the page before its turn, and stays gone after it. */
+  animation: snow-fall var(--fall) linear var(--delay) both;
+}
+/* The logo answers a pointer or the keyboard (components/logo.tsx): its hat hops once, and its cursor blinks. */
+@keyframes logo-hat {
+  40% {
+    transform: translateY(-4px) rotate(-8deg);
+  }
+  70% {
+    transform: translateY(0) rotate(4deg);
+  }
+}
+@keyframes logo-cursor {
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+.logo-hat {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+.logo-button:hover .logo-hat,
+.logo-button:focus-visible .logo-hat {
+  animation: logo-hat 500ms ease-out;
+}
+.logo-button:hover .logo-cursor,
+.logo-button:focus-visible .logo-cursor {
+  animation: logo-cursor 900ms steps(1, end) infinite;
+}
 @media (prefers-reduced-motion: reduce) {
   :root {
     --duration-fast: 0ms;

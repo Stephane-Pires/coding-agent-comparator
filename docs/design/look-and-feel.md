@@ -31,6 +31,10 @@ A second one: **code keeps its syntax colours**, GitHub's default light and dark
 message and the file viewer share them, and share one frame: a muted label, then the code on an inset panel in the
 page's background, with line numbers, at 14 px. Both read as one product.
 
+A third one: **the logo keeps its own colours.** A bobble hat over a ski mask whose lens is a terminal prompt, in
+the accent's three pinks and one ink, the same in both themes. The product has no name: the logo stands for it, alone in the page
+header and, as a simpler drawing, in the browser tab.
+
 Red is for errors only. The quiet action (Stop) is a bordered button, never pink and never red, so an action never
 reads as a warning.
 
@@ -78,9 +82,14 @@ A second one: **the tracks of the empty page's picture draw themselves once**, t
 opens. It is the product's one piece of character, shown before any work exists. With the system's reduced-motion setting nothing moves (the CSS
 durations become 0) and the spinner stays as a still icon.
 
-## Voice
+A third one: **the logo answers a pointer**: its hat hops once and its cursor blinks while it is pointed at, to say
+that it can be clicked (a click reloads the page).
 
-The product is **Twin Tracks**: the tracks two skiers leave side by side on one slope.
+A fourth one: **pink snow falls once over the page when every agent of a comparison finished**, for about five
+seconds. It is the product's one celebration: it never loops, never falls for a run that failed or was stopped, and
+catches no click.
+
+## Voice
 
 One idea: **every task is a run down the same course.** Two agents start together and the app keeps the times. The app
 already called it a "run"; the voice takes that word seriously, lightly, the way a friend on the ski lift would.
@@ -96,6 +105,9 @@ already called it a "run"; the voice takes that word seriously, lightly, the way
   done, failed.
 - A mountain word is kept only if the sentence is clear to someone who has never skied. Left out after
   testing with a reader who never skied: fresh snow, on the course, out of the gate, piste, powder.
+- The two pages with no content keep the theme in their title and say the plain fact beside it: a missing page is
+  "Off the marked runs." then "This page is not on the map."; a failure on our side is "The lift is stopped." then
+  "Something broke on our side."
 - Numbers, errors and code stay plain. The reason a run did not finish is the agent's own words, never rewritten.
 
 ## Layout

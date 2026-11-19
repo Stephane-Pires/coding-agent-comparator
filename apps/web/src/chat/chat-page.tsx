@@ -65,24 +65,27 @@ export function ChatPage() {
   return (
     <div className="flex h-dvh flex-col">
       <div className="page-frame py-4">
-        <PageHeader title="Twin Tracks" />
+        <PageHeader title="Compare coding agents" />
       </div>
-      <Conversation className="min-h-0 flex-1">
-        <ConversationContent className="page-frame gap-8 py-4">
-          {comparisons.length === 0 ? (
-            <EmptyComparison />
-          ) : (
-            comparisons.map(({ id, task, state }) =>
+      {comparisons.length === 0 ? (
+        // Not in the scrolling log: the empty page sits in the middle of the room between the header and the field.
+        <main className="page-frame flex min-h-0 flex-1 overflow-y-auto">
+          <EmptyComparison />
+        </main>
+      ) : (
+        <Conversation className="min-h-0 flex-1">
+          <ConversationContent className="page-frame gap-8 py-4">
+            {comparisons.map(({ id, task, state }) =>
               state.status === 'started' ? (
                 <Comparison key={id} task={task} runs={state.runs} onRunSettled={onSettled} />
               ) : (
                 <UnstartedComparison key={id} task={task} state={state} />
               ),
-            )
-          )}
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
+            )}
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
+      )}
       <div className="page-frame border-t py-4">
         <TaskInput running={inProgress > 0} onSend={send} onStop={stop} />
       </div>

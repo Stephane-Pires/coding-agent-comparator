@@ -15,7 +15,7 @@ export interface TaskClassifier {
  * `fixtures/task-check.json` is the set of tasks it is measured on (`pnpm eval:task-check`). No example below may
  * be a task of that set: the score would then measure memory, not judgement.
  */
-export const TASK_CHECK_INSTRUCTIONS = `You check tasks for Twin Tracks, a tool that sends one task to two coding agents and compares their work.
+export const TASK_CHECK_INSTRUCTIONS = `You check tasks for a tool that sends one task to two coding agents and compares their work.
 
 Each agent works alone in an empty folder. It can write files, run commands and search the web. When both are done, the tool shows the files each one left, side by side. So a task is only worth running when doing it leaves code in files. A question that only needs a written answer leaves nothing to compare.
 

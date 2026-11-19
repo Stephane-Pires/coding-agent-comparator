@@ -64,7 +64,7 @@ export function createApp({ startRun, checkTask }: AppDeps): Hono {
     c.json(
       await openapi.generate(router, {
         info: {
-          title: 'Twin Tracks API',
+          title: 'Coding Agent Comparator API',
           version: '0.0.0',
           description: 'Send one task to several coding agents and watch how each performs.',
         },
@@ -72,6 +72,6 @@ export function createApp({ startRun, checkTask }: AppDeps): Hono {
       }),
     ),
   );
-  app.get('/docs', Scalar({ url: '/openapi.json', pageTitle: 'Twin Tracks API' }));
+  app.get('/docs', Scalar({ url: '/openapi.json', pageTitle: 'Coding Agent Comparator API' }));
   return app;
 }

@@ -6,6 +6,7 @@ import { useCallback, useState } from 'react';
 import type { AgentId, Task } from '@comparator/contracts';
 import { ComparisonMetrics, type RunResult } from '@comparator/ui/components/comparison-metrics';
 import { ComparisonView } from '@comparator/ui/components/comparison-view';
+import { Snowfall } from '@comparator/ui/components/snowfall';
 import { TaskCheckNotice, type TaskCheckState } from '@comparator/ui/components/task-check-notice';
 
 import type { RunMessage } from '../lib/run-chat.ts';
@@ -46,10 +47,20 @@ export function Comparison({
   // In the order of the columns, whichever run ended first.
   const ordered = runs.flatMap(({ agent }) => results.filter((result) => result.agent === agent));
 
+  const ended = ordered.length === runs.length;
+
   return (
     <ComparisonView
       task={task}
-      summary={ordered.length === runs.length ? <ComparisonMetrics runs={ordered} /> : null}
+      summary={
+        ended ? (
+          <>
+            <ComparisonMetrics runs={ordered} />
+            {/* It snows once when every agent finished: not for a run that failed or was stopped. */}
+            {ordered.every(({ status }) => status === 'succeeded') ? <Snowfall /> : null}
+          </>
+        ) : null
+      }
     >
       {runs.map(({ agent, chat }) => (
         <Run key={agent} agent={agent} chat={chat} onSettled={onSettled} />

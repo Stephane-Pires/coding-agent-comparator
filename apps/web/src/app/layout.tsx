@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Twin Tracks',
+  title: 'Compare coding agents',
   description: 'Send one task to several coding agents and watch how each one handles it.',
 };
 
