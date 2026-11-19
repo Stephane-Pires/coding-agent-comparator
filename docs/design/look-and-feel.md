@@ -83,7 +83,7 @@ opens. It is the product's one piece of character, shown before any work exists.
 durations become 0) and the spinner stays as a still icon.
 
 A third one: **the logo answers a pointer**: its hat hops once and its cursor blinks while it is pointed at, to say
-that it can be clicked (a click reloads the page).
+that it can be clicked (a click goes back to the start page).
 
 A fourth one: **pink snow falls once over the page when every agent of a comparison finished**, for about five
 seconds. It is the product's one celebration: it never loops, never falls for a run that failed or was stopped, and
