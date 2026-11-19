@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.next/
+out/
+storybook-static/
+*.tsbuildinfo
+
+# Secrets: never commit keys
+.env
+.env.*
+!.env.example
+
+# Tests
+coverage/
+test-results/
+playwright-report/
+
+# Vercel
+.vercel/
+
+# OS and editors
+.DS_Store
