@@ -35,7 +35,7 @@ export const OneFailed: Story = {
         agent="claude-code"
         status="failed"
         items={[]}
-        failureReason="There's an issue with the selected model (no-such-model). It may not exist or you may not have access to it."
+        reason="There's an issue with the selected model (no-such-model). It may not exist or you may not have access to it."
       />
       <RunColumn
         agent="codex"

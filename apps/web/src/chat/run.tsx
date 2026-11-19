@@ -45,8 +45,12 @@ export function Run({
   // A stream that ends with no outcome was stopped by the user; one that breaks never reached the API.
   const status: RunStatus =
     outcome?.status ?? (stream === 'error' ? 'failed' : stream === 'ready' ? 'cancelled' : 'running');
-  const failureReason =
-    outcome?.status === 'failed' ? outcome.reason : stream === 'error' ? UNREACHABLE : undefined;
+  const reason =
+    outcome?.status === 'failed' || outcome?.status === 'incomplete'
+      ? outcome.reason
+      : stream === 'error'
+        ? UNREACHABLE
+        : undefined;
 
   const settled = status !== 'running';
   useEffect(() => {
@@ -54,7 +58,5 @@ export function Run({
     if (settled) onSettled({ agent, status, metrics });
   }, [settled, onSettled]);
 
-  return (
-    <RunColumn agent={agent} status={status} items={items} files={files} failureReason={failureReason} />
-  );
+  return <RunColumn agent={agent} status={status} items={items} files={files} reason={reason} />;
 }

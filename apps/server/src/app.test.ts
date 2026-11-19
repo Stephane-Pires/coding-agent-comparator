@@ -1,14 +1,21 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { startRun, type CheckTask } from '@comparator/application';
+import { startRun, type CheckTask, type ReviewRun } from '@comparator/application';
 import { inMemoryWorkspaces, scriptedAgent, tickingClock, type Step } from '@comparator/application/testing';
 
 import { createApp } from './app.ts';
 
 const accepts: CheckTask = () => Promise.resolve({ verdict: 'accepted' });
+const done: ReviewRun = () => Promise.resolve({ status: 'succeeded' });
+const asksBack: ReviewRun = () => Promise.resolve({ status: 'incomplete', reason: 'It asked a question.' });
 const refuses: CheckTask = () => Promise.resolve({ verdict: 'refused', reason: 'Not a coding task.' });
 
-function setup(claudeSteps: readonly Step[], workspaces = inMemoryWorkspaces(), checkTask = accepts) {
+function setup(
+  claudeSteps: readonly Step[],
+  workspaces = inMemoryWorkspaces(),
+  checkTask = accepts,
+  reviewRun = done,
+) {
   const claude = scriptedAgent(claudeSteps);
   const codex = scriptedAgent([
     { kind: 'message', text: 'from codex' },
@@ -21,6 +28,7 @@ function setup(claudeSteps: readonly Step[], workspaces = inMemoryWorkspaces(), 
       workspaces,
       clock: tickingClock(500),
       checkTask,
+      reviewRun,
     }),
   });
   const post = (path: string, body: unknown, signal?: AbortSignal) =>
@@ -151,6 +159,20 @@ describe('POST /api/runs', () => {
       { type: 'data-outcome', data: { status: 'succeeded' } },
       { type: 'finish' },
     ]);
+  });
+
+  it('streams an incomplete run as its outcome, with the reason', async () => {
+    const { post } = setup(
+      [{ kind: 'finished', outcome: { status: 'succeeded' } }],
+      inMemoryWorkspaces(),
+      accepts,
+      asksBack,
+    );
+    const response = await post('/api/runs', { agent: 'claude-code', task: 'write a function' });
+    expect((await chunks(response)).at(-2)).toEqual({
+      type: 'data-outcome',
+      data: { status: 'incomplete', reason: 'It asked a question.' },
+    });
   });
 
   it('streams a failure as the outcome of the run, not as an HTTP error', async () => {

@@ -1,9 +1,10 @@
 import { errAsync, okAsync } from 'neverthrow';
 
-import type { AgentEvent, Task, TaskAssessment, WorkspaceFile } from '@comparator/domain';
+import type { AgentEvent, RunReview, Task, TaskAssessment, WorkspaceFile } from '@comparator/domain';
 
 import type { Clock } from '../ports/clock.ts';
 import type { AgentRun, CodingAgent } from '../ports/coding-agent.ts';
+import type { RunReviewer, RunWork } from '../ports/run-reviewer.ts';
 import type { TaskClassifier } from '../ports/task-classifier.ts';
 import type { Workspace, WorkspaceProvider } from '../ports/workspace-provider.ts';
 
@@ -82,6 +83,18 @@ export function scriptedClassifier(
     assess(task) {
       asked.push(task);
       return answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer);
+    },
+  };
+}
+
+/** A reviewer that gives the same review for every run, or fails with `review` when it is an error. */
+export function scriptedReviewer(review: RunReview | Error): RunReviewer & { readonly reviewed: RunWork[] } {
+  const reviewed: RunWork[] = [];
+  return {
+    reviewed,
+    review(work) {
+      reviewed.push(work);
+      return review instanceof Error ? Promise.reject(review) : Promise.resolve(review);
     },
   };
 }

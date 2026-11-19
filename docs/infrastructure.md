@@ -66,6 +66,17 @@ three seconds. If the model cannot be reached, the task is accepted: the check i
 the instructions are in the core (`verdictOf`, `TASK_CHECK_INSTRUCTIONS`); `pnpm eval:task-check` measures them on
 the labelled tasks of `fixtures/task-check.json`.
 
+### The review of a run
+
+An agent can stop without an error and not have done its task: it asks a question back, or describes what it would
+do. So when an agent stops cleanly, the API asks a model one more question: was the task done? It shows the model the
+task, what the agent said, the paths of the files it left and how many tools it called, and never which agent it was.
+A run that did not do its task ends as **incomplete**, with one sentence saying what is missing.
+
+Like the task check, the question goes to Claude Code with no tools, on the model set by `TASK_CHECK_MODEL`, and takes
+about three seconds, which are not counted in the run's duration. If the model cannot be reached, the run counts as
+finished. `pnpm eval:run-review` measures the instructions on the labelled runs of `fixtures/run-review.json`.
+
 ### Routes
 
 | Route                   | What it serves                                                    |
@@ -87,7 +98,7 @@ Read from the environment, and from a `.env` file at the root of the repository 
 | `OPENAI_API_KEY`    | not set                 | Secret. Without it, Codex uses the login on the machine.                |
 | `CLAUDE_CODE_MODEL` | `haiku`                 | The model Claude Code runs on                                           |
 | `CODEX_MODEL`       | `gpt-6-luna`            | The model Codex runs on                                                 |
-| `TASK_CHECK_MODEL`  | `haiku`                 | The model that checks a task before the agents run                      |
+| `TASK_CHECK_MODEL`  | `haiku`                 | The model that checks a task before a run and reviews it after          |
 | `PORT`              | `3001`                  | The port of the API                                                     |
 | `API_URL`           | `http://localhost:3001` | Read by the web app: where it forwards `/rpc`. Not sent to the browser. |
 

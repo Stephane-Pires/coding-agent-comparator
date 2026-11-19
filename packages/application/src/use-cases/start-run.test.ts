@@ -4,6 +4,7 @@ import { Task, type AgentEvent, type Metrics, type RunEvent, type WorkspaceFile 
 
 import { inMemoryWorkspaces, scriptedAgent, tickingClock, type Step } from '../testing/index.ts';
 import type { CheckTask } from './check-task.ts';
+import type { ReviewRun, ReviewRunInput } from './review-run.ts';
 import { startRun } from './start-run.ts';
 
 const task = Task.parse('write a script');
@@ -21,9 +22,16 @@ const call = (status: 'running' | 'succeeded', id = 'c1'): Shared => ({
 });
 
 const accepts: CheckTask = () => Promise.resolve({ verdict: 'accepted' });
+const done: ReviewRun = () => Promise.resolve({ status: 'succeeded' });
+const asksBack: ReviewRun = () => Promise.resolve({ status: 'incomplete', reason: 'It asked a question.' });
 const refuses: CheckTask = () => Promise.resolve({ verdict: 'refused', reason: 'Not a coding task.' });
 
-function setup(steps: readonly Step[], workspaces = inMemoryWorkspaces(), checkTask = accepts) {
+function setup(
+  steps: readonly Step[],
+  workspaces = inMemoryWorkspaces(),
+  checkTask = accepts,
+  reviewRun = done,
+) {
   const claude = scriptedAgent(steps);
   const codex = scriptedAgent([message('from codex'), succeeded]);
   const controller = new AbortController();
@@ -33,6 +41,7 @@ function setup(steps: readonly Step[], workspaces = inMemoryWorkspaces(), checkT
     workspaces,
     clock: tickingClock(750),
     checkTask,
+    reviewRun,
   });
   const all = () => Array.fromAsync(run({ agent: 'claude-code', task, signal: controller.signal }));
   /** The run without its totals, which have their own tests. */
@@ -43,6 +52,57 @@ function setup(steps: readonly Step[], workspaces = inMemoryWorkspaces(), checkT
 }
 
 describe('startRun', () => {
+  describe('the review of a run whose agent stopped without error', () => {
+    it('ends the run as incomplete when the task was not done, with its totals', async () => {
+      const { all } = setup(
+        [message('What should it do?'), succeeded],
+        inMemoryWorkspaces(),
+        accepts,
+        asksBack,
+      );
+      const events = await all();
+      expect(events.at(-1)).toEqual({
+        kind: 'finished',
+        outcome: { status: 'incomplete', reason: 'It asked a question.' },
+      });
+      expect(events.at(-2)).toMatchObject({ kind: 'metrics' });
+    });
+
+    it('shows the reviewer the task, what the agent said, the files it left and how many tools it called', async () => {
+      const seen: ReviewRunInput[] = [];
+      const watching: ReviewRun = (input) => {
+        seen.push(input);
+        return Promise.resolve({ status: 'succeeded' });
+      };
+      const workspaces = inMemoryWorkspaces({ reads: [[file('a.mjs', '1')]] });
+      await setup(
+        [message('one'), call('succeeded'), message('two'), succeeded],
+        workspaces,
+        accepts,
+        watching,
+      ).all();
+      expect(seen.map(({ work }) => work)).toEqual([
+        { task, answer: 'one\n\ntwo', files: ['a.mjs'], toolCalls: 1 },
+      ]);
+    });
+
+    it('does not count the review in the duration of the run', async () => {
+      // The clock is read at the start and before the review: 750 ms apart, whatever the review takes.
+      const { metrics } = setup([succeeded], inMemoryWorkspaces(), accepts, asksBack);
+      expect(await metrics()).toMatchObject([{ durationMs: 750 }]);
+    });
+
+    it('is not asked for a run that failed', async () => {
+      const seen: ReviewRunInput[] = [];
+      const watching: ReviewRun = (input) => {
+        seen.push(input);
+        return Promise.resolve({ status: 'succeeded' });
+      };
+      await setup([failed('boom')], inMemoryWorkspaces(), accepts, watching).all();
+      expect(seen).toHaveLength(0);
+    });
+  });
+
   it('starts nothing for a refused task: no workspace, no agent, and the reason as the failure', async () => {
     const { all, claude, workspaces } = setup([message('one'), succeeded], inMemoryWorkspaces(), refuses);
     expect(await all()).toEqual([failed('Not a coding task.')]);

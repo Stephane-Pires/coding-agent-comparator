@@ -22,6 +22,7 @@ Everything else stays black, white and greys, with two tones for the state of a 
 | -------------- | --------------------- | ---------------------------- |
 | Running        | grey                  | its icon and the word        |
 | Succeeded      | green (`--success`)   | its icon and the word        |
+| Incomplete     | grey                  | its icon, the word, a reason |
 | Failed         | red (`--destructive`) | its icon, the word, a reason |
 | Cancelled      | grey                  | its icon and the word        |
 
@@ -101,7 +102,8 @@ already called it a "run"; the voice takes that word seriously, lightly, the way
 | Good company | One light touch per screen; on your side when a run fails | Puns everywhere, or a joke in an error |
 | Fair         | Says what happened; has no favourite agent                | Cold, or silent                        |
 
-- A run is **running**, then **finished**, **did not finish** or was **stopped**. Only a duration is ever called
+- A run is **running**, then **finished**, **incomplete** (it stopped cleanly without doing its task), **did not
+  finish** or was **stopped**. Only a duration is ever called
   "fastest": never "race", "winner" or "loser". The steps inside a run (tool calls) keep plain words: running,
   done, failed.
 - A mountain word is kept only if the sentence is clear to someone who has never skied. Left out after

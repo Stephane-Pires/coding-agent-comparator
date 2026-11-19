@@ -51,7 +51,9 @@ export const RunChunk = z.discriminatedUnion('type', [
     ),
   z
     .object({ type: z.literal('data-outcome'), data: RunOutcome })
-    .describe('How the run ended: succeeded, failed with a reason, or cancelled. Sent once.'),
+    .describe(
+      'How the run ended: succeeded, incomplete with a reason (the agent stopped without error but did not do the task), failed with a reason, or cancelled. Sent once.',
+    ),
   z.object({ type: z.literal('finish') }).describe('The stream is over.'),
 ]);
 export type RunChunk = z.infer<typeof RunChunk>;

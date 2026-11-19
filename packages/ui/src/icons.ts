@@ -4,6 +4,7 @@ import {
   Check,
   ChevronDown,
   CircleCheck,
+  CircleDashed,
   CircleX,
   FilePen,
   Globe,
@@ -28,6 +29,7 @@ export const ICONS = {
   run: {
     running: LoaderCircle,
     succeeded: CircleCheck,
+    incomplete: CircleDashed,
     failed: CircleX,
     cancelled: Ban,
   } satisfies Record<RunStatus, LucideIcon>,

@@ -1,5 +1,6 @@
 export { AgentId } from './agent.ts';
 export { AgentEvent, RunEvent, RunOutcome } from './run-event.ts';
+export { reviewedOutcome, RUN_REVIEW_JSON_SCHEMA, RunReview } from './run-review.ts';
 export type { RunStatus } from './run-event.ts';
 export { Task, TASK_MAX_LENGTH } from './task.ts';
 export { TASK_ASSESSMENT_JSON_SCHEMA, TaskAssessment, TaskVerdict, verdictOf } from './task-check.ts';

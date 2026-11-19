@@ -4,9 +4,13 @@ import { ToolCall } from './tool-call.ts';
 import { Metrics, Usage } from './usage.ts';
 import { WorkspaceFile } from './workspace-file.ts';
 
-/** How a run ended. */
+/**
+ * How a run ended. `succeeded` and `incomplete` both mean the agent stopped without an error: in the first it did
+ * its task, in the second it did not, as when it only asked a question back.
+ */
 export const RunOutcome = z.discriminatedUnion('status', [
   z.object({ status: z.literal('succeeded') }),
+  z.object({ status: z.literal('incomplete'), reason: z.string() }),
   z.object({ status: z.literal('failed'), reason: z.string() }),
   z.object({ status: z.literal('cancelled') }),
 ]);

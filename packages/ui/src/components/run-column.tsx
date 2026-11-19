@@ -18,8 +18,8 @@ export interface RunColumnProps {
   readonly items: readonly RunItem[];
   /** The files of the agent's workspace, as they stand now. */
   readonly files?: readonly WorkspaceFile[] | undefined;
-  /** Why the run failed, in the agent's own words. */
-  readonly failureReason?: string | undefined;
+  /** Why the run failed, in the agent's own words, or why it is incomplete, in the reviewer's. */
+  readonly reason?: string | undefined;
 }
 
 type Block =
@@ -39,7 +39,7 @@ function blocksOf(items: readonly RunItem[]): Block[] {
 }
 
 /** One agent's run: who it is, where the run stands, and what the agent said and did. */
-export function RunColumn({ agent, status, items, files = [], failureReason }: RunColumnProps) {
+export function RunColumn({ agent, status, items, files = [], reason }: RunColumnProps) {
   const Icon = ICONS.agent[agent];
   const label = AGENT_LABELS[agent];
   return (
@@ -70,9 +70,8 @@ export function RunColumn({ agent, status, items, files = [], failureReason }: R
           </div>
         ),
       )}
-      {status === 'failed' && failureReason ? (
-        <p className="text-sm text-destructive">{failureReason}</p>
-      ) : null}
+      {status === 'failed' && reason ? <p className="text-sm text-destructive">{reason}</p> : null}
+      {status === 'incomplete' && reason ? <p className="text-sm text-muted-foreground">{reason}</p> : null}
       {files.some((file) => file.state !== 'deleted') ? <RunFiles files={files} /> : null}
     </section>
   );

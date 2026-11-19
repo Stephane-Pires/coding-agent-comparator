@@ -15,7 +15,8 @@
     "check": "vp check && vp test run",
     "fix": "vp check --fix",
     "test": "vp test run",
-    "eval:task-check": "node packages/connectors/claude-code/src/task-check.eval.ts",
+    "eval:task-check": "node packages/connectors/claude-code/src/evals/task-check.eval.ts",
+    "eval:run-review": "node packages/connectors/claude-code/src/evals/run-review.eval.ts",
     "test:stories": "pnpm --filter @comparator/ui build-storybook && playwright test -c playwright.storybook.config.ts"
   },
   "devDependencies": {

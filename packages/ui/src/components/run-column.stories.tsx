@@ -116,8 +116,17 @@ export const SnippetAndFile: Story = {
 export const Failed: Story = {
   args: {
     status: 'failed',
-    failureReason:
+    reason:
       "There's an issue with the selected model (no-such-model). It may not exist or you may not have access to it.",
+  },
+};
+
+/** The agent stopped without an error, but only asked a question: the reviewer says what is missing. */
+export const Incomplete: Story = {
+  args: {
+    status: 'incomplete',
+    items: [message('1', "There aren't any Rust files in the workspace yet. What should the function do?")],
+    reason: 'It asked what the function should do and wrote nothing.',
   },
 };
 

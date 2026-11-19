@@ -4,6 +4,7 @@ import type { Clock } from '../ports/clock.ts';
 import type { CodingAgent } from '../ports/coding-agent.ts';
 import type { Workspace, WorkspaceProvider } from '../ports/workspace-provider.ts';
 import type { CheckTask } from './check-task.ts';
+import type { ReviewRun } from './review-run.ts';
 
 export interface StartRunDeps {
   readonly agents: Readonly<Record<AgentId, CodingAgent>>;
@@ -11,6 +12,8 @@ export interface StartRunDeps {
   readonly clock: Clock;
   /** Whether the agents may run a task. Asked before anything is created. */
   readonly checkTask: CheckTask;
+  /** How a run ended when its agent stopped without error: whether it did its task. */
+  readonly reviewRun: ReviewRun;
 }
 
 export interface StartRunInput {
@@ -36,6 +39,8 @@ function followFiles(workspaces: WorkspaceProvider, workspace: Workspace) {
   return {
     /** How many files the workspace held at the last read. */
     count: () => [...known.values()].filter((file) => file.state !== 'deleted').length,
+    /** The paths of those files. */
+    paths: () => [...known.values()].filter((file) => file.state !== 'deleted').map((file) => file.path),
     async *changes(): AsyncGenerator<RunEvent, void, void> {
       const files = await workspaces.read(workspace);
       const paths = new Set(files.map(({ path }) => path));
@@ -59,7 +64,7 @@ function followFiles(workspaces: WorkspaceProvider, workspace: Workspace) {
  * Whatever the agent does, the run ends with exactly one `finished` event, nothing follows it, and the
  * workspace is disposed of. A run that was not cancelled gives its totals just before, also when it failed.
  */
-export const startRun = ({ agents, workspaces, clock, checkTask }: StartRunDeps): StartRun =>
+export const startRun = ({ agents, workspaces, clock, checkTask, reviewRun }: StartRunDeps): StartRun =>
   async function* run({ agent, task, signal }) {
     // A task that is refused starts nothing: no workspace, no agent. The page asks first and shows the refusal
     // once; this is what stops a caller that did not ask.
@@ -77,6 +82,7 @@ export const startRun = ({ agents, workspaces, clock, checkTask }: StartRunDeps)
     const workspace = created.value;
     const files = followFiles(workspaces, workspace);
     const toolCalls = new Set<string>();
+    const said: string[] = [];
     let model: string | null = null;
     let usage: Usage | null = null;
     try {
@@ -96,6 +102,7 @@ export const startRun = ({ agents, workspaces, clock, checkTask }: StartRunDeps)
             continue;
           }
           yield event;
+          if (event.kind === 'message') said.push(event.text);
           if (event.kind !== 'tool-call') continue;
           toolCalls.add(event.call.id);
           // A tool that ended may have written files.
@@ -107,12 +114,22 @@ export const startRun = ({ agents, workspaces, clock, checkTask }: StartRunDeps)
       } catch (error) {
         outcome = signal.aborted ? { status: 'cancelled' } : { status: 'failed', reason: reasonOf(error) };
       }
+      // An agent that stopped without error has not always done its task: a reviewer reads what it delivered. The
+      // run's time is taken before the review, which is ours and not the agent's.
+      let endedAt: number | undefined;
+      if (outcome.status === 'succeeded') {
+        yield* files.changes();
+        endedAt = clock.now();
+        const work = { task, answer: said.join('\n\n'), files: files.paths(), toolCalls: toolCalls.size };
+        outcome = await reviewRun({ work, signal });
+        if (signal.aborted) outcome = { status: 'cancelled' };
+      }
       // Nobody follows a cancelled run any more; any other run shows what it left and consumed, also when it failed.
       if (outcome.status !== 'cancelled') {
         yield* files.changes();
         const metrics = {
           model,
-          durationMs: Math.round(clock.now() - startedAt),
+          durationMs: Math.round((endedAt ?? clock.now()) - startedAt),
           usage,
           toolCalls: toolCalls.size,
           files: files.count(),

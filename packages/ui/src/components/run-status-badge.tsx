@@ -10,6 +10,8 @@ import { cn } from '@comparator/ui/lib/utils';
 const STATUSES: Record<RunStatus, { label: string; tone: string }> = {
   running: { label: 'Running', tone: 'text-muted-foreground' },
   succeeded: { label: 'Finished', tone: 'text-success' },
+  // Not an error: the agent stopped cleanly, without having done its task. Grey, with the reason in its column.
+  incomplete: { label: 'Incomplete', tone: 'text-muted-foreground' },
   failed: { label: 'Did not finish', tone: 'text-destructive' },
   cancelled: { label: 'Stopped', tone: 'text-muted-foreground' },
 };
