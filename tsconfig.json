@@ -20,5 +20,5 @@
     "types": ["node"]
   },
   "include": ["packages/**/src", "apps/*/src", "tooling", "vite.config.ts", "playwright.storybook.config.ts"],
-  "exclude": ["**/node_modules", "packages/ui"]
+  "exclude": ["**/node_modules", "packages/ui", "apps/web"]
 }

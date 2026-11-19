@@ -1,0 +1,5 @@
+/* The design system brings everything: tokens, fonts and utilities. The app adds no style of its own. */
+@import '@comparator/ui/styles.css';
+
+/* Classes used by this app's own files. */
+@source '../';

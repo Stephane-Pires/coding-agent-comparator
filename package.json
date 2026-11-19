@@ -10,7 +10,7 @@
   },
   "scripts": {
     "prepare": "vp config --no-agent",
-    "dev": "pnpm --filter @comparator/server dev",
+    "dev": "pnpm --parallel --filter @comparator/server --filter @comparator/web dev",
     "storybook": "pnpm --filter @comparator/ui storybook",
     "check": "vp check && vp test run",
     "fix": "vp check --fix",

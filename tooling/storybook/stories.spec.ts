@@ -17,8 +17,13 @@ const stories = Object.values(index.entries).filter((entry) => entry.type === 's
 for (const story of stories) {
   for (const theme of ['light', 'dark']) {
     test(`${story.title} / ${story.name} (${theme})`, async ({ page }) => {
-      await page.goto(`/iframe.html?id=${story.id}&viewMode=story&globals=theme:${theme}`);
+      // Check the settled page: no transition in flight, fonts and code highlighting loaded.
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(`/iframe.html?id=${story.id}&viewMode=story&globals=theme:${theme}`, {
+        waitUntil: 'networkidle',
+      });
       await page.locator('#storybook-root > *').first().waitFor();
+      await page.waitForFunction('document.fonts.status === "loaded"');
       await expect(page.locator('html')).toHaveClass(theme === 'dark' ? /dark/ : /^(?!.*dark)/);
       const { violations } = await new AxeBuilder({ page })
         .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])

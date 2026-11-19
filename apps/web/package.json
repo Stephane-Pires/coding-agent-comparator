@@ -3,8 +3,29 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "The web app: a chat that shows two agent runs side by side.",
-  "exports": {
-    ".": "./src/index.ts"
+  "description": "The web app: one task, every agent, side by side. Talks to the API only through the contract.",
+  "scripts": {
+    "dev": "next dev --port 3100",
+    "build": "next build",
+    "start": "next start --port 3100"
+  },
+  "dependencies": {
+    "@ai-sdk/react": "^4.0.181",
+    "@comparator/contracts": "workspace:*",
+    "@comparator/ui": "workspace:*",
+    "@orpc/client": "^1.16.4",
+    "@orpc/contract": "^1.16.4",
+    "ai": "^7.0.177",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "postcss": "^8.5.33",
+    "tailwindcss": "^4.3.5"
   }
 }

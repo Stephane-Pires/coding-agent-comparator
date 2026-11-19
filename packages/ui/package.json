@@ -7,6 +7,7 @@
   "exports": {
     "./styles.css": "./src/styles.css",
     "./icons": "./src/icons.ts",
+    "./agents": "./src/agents.ts",
     "./components/*": "./src/components/*.tsx",
     "./lib/*": "./src/lib/*.ts"
   },

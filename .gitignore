@@ -23,3 +23,6 @@ playwright-report/
 
 # OS and editors
 .DS_Store
+
+# Next.js (generated)
+next-env.d.ts
