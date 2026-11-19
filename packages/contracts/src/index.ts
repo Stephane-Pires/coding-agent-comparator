@@ -30,7 +30,7 @@ export const RunChunk = z.discriminatedUnion('type', [
 export type RunChunk = z.infer<typeof RunChunk>;
 
 /** Why a request was refused: one issue per field that is wrong, with the path of the field. */
-export const InvalidInput = z.object({
+const InvalidInput = z.object({
   issues: z.array(
     z.looseObject({
       path: z.array(z.union([z.string(), z.number()])),

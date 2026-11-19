@@ -4,7 +4,7 @@ import type { CodingAgent } from '@comparator/application';
 
 import { translate } from './translate.ts';
 
-export interface ClaudeCodeOptions {
+interface ClaudeCodeOptions {
   readonly model: string;
   /** Without a key, Claude Code uses the login already on the machine. */
   readonly apiKey: string | undefined;
