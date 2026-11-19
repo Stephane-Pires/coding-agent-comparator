@@ -37,6 +37,8 @@ export function codexAgent({ model, apiKey }: CodexOptions): CodingAgent {
         networkAccessEnabled: true,
         webSearchMode: 'live',
       });
+      // Codex's events never name the model: this is the one it was asked to use.
+      yield { kind: 'model', model };
       const { events } = await thread.runStreamed(task, { signal });
       for await (const event of events) yield* translate(event, workspace.path);
     },

@@ -47,7 +47,7 @@ export const RunChunk = z.discriminatedUnion('type', [
   z
     .object({ type: z.literal('data-metrics'), data: Metrics })
     .describe(
-      'The totals of the run: its duration, what the agent says it consumed (null when it reported nothing), and how many tools it called and files it left. Sent once, before the outcome; not sent for a cancelled run.',
+      'The totals of the run: the model the agent ran on and what it says it consumed (each null when it reported nothing), its duration, and how many tools it called and files it left. Sent once, before the outcome; not sent for a cancelled run.',
     ),
   z
     .object({ type: z.literal('data-outcome'), data: RunOutcome })

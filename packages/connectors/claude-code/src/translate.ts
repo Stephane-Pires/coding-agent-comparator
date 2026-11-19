@@ -145,6 +145,9 @@ export function createTranslator(workspacePath: string): (message: SDKMessage) =
         return call(tool, resultText(block.content));
       });
     }
+    // The first message of a run says which model answers: the full name, where the configuration may hold an alias.
+    if (message.type === 'system' && message.subtype === 'init')
+      return [{ kind: 'model', model: message.model }];
     if (message.type === 'result') {
       // `subtype: 'success'` cannot be trusted alone: a refused model is a "success" with `is_error`.
       const usage: AgentEvent = { kind: 'usage', usage: usageOf(message) };

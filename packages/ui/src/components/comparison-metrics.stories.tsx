@@ -6,12 +6,14 @@ import { ComparisonMetrics } from './comparison-metrics.tsx';
 
 // The numbers of two recorded runs.
 const CLAUDE: Metrics = {
+  model: 'claude-haiku-5-5',
   durationMs: 31_240,
   usage: { inputTokens: 139_134, cachedInputTokens: 83_795, outputTokens: 3422, costUsd: 0.030_474_65 },
   toolCalls: 4,
   files: 1,
 };
 const CODEX: Metrics = {
+  model: 'gpt-6-luna',
   durationMs: 19_410,
   usage: { inputTokens: 56_186, cachedInputTokens: 48_000, outputTokens: 277, costUsd: null },
   toolCalls: 2,
@@ -43,7 +45,7 @@ export const OneFailed: Story = {
       {
         agent: 'codex',
         status: 'failed',
-        metrics: { durationMs: 4200, usage: null, toolCalls: 1, files: 0 },
+        metrics: { model: null, durationMs: 4200, usage: null, toolCalls: 1, files: 0 },
       },
     ],
   },

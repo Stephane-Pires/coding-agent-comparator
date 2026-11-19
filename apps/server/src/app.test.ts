@@ -147,7 +147,7 @@ describe('POST /api/runs', () => {
     const response = await post('/api/runs', { agent: 'claude-code', task: 'say hi' });
     expect(await allChunks(response)).toEqual([
       { type: 'start' },
-      { type: 'data-metrics', data: { durationMs: 500, usage, toolCalls: 0, files: 0 } },
+      { type: 'data-metrics', data: { model: null, durationMs: 500, usage, toolCalls: 0, files: 0 } },
       { type: 'data-outcome', data: { status: 'succeeded' } },
       { type: 'finish' },
     ]);

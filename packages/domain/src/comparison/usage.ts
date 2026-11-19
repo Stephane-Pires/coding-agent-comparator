@@ -43,8 +43,13 @@ export function countTokens({
   return { inputTokens: uncachedInput + cachedInput, cachedInputTokens: cachedInput, outputTokens: output };
 }
 
-/** The totals of a run. `usage` is `null` when the agent reported none, as when it crashed before its end. */
+/**
+ * The totals of a run. `model` and `usage` are `null` when the agent reported none, as when it crashed before it
+ * could.
+ */
 export const Metrics = z.object({
+  /** The model the agent ran on, as the agent names it. */
+  model: z.string().nullable(),
   /** From the start of the run to its end, workspace included. */
   durationMs: count,
   usage: Usage.nullable(),

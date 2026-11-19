@@ -189,10 +189,15 @@ describe('startRun', () => {
     const usage = { inputTokens: 1200, cachedInputTokens: 800, outputTokens: 90, costUsd: 0.012 };
 
     it('gives the totals once, just before the end, and keeps the usage out of the run', async () => {
-      const { all } = setup([message('one'), { kind: 'usage', usage }, succeeded]);
+      const { all } = setup([
+        { kind: 'model', model: 'a-model' },
+        message('one'),
+        { kind: 'usage', usage },
+        succeeded,
+      ]);
       expect(await all()).toEqual([
         message('one'),
-        { kind: 'metrics', metrics: { durationMs: 750, usage, toolCalls: 0, files: 0 } },
+        { kind: 'metrics', metrics: { model: 'a-model', durationMs: 750, usage, toolCalls: 0, files: 0 } },
         succeeded,
       ]);
     });
@@ -216,7 +221,9 @@ describe('startRun', () => {
 
     it('has no usage when the agent reported none, and still the rest, as after a crash', async () => {
       const { metrics } = setup([call('succeeded'), { throws: new Error('crash') }]);
-      expect(await metrics()).toEqual([{ durationMs: 750, usage: null, toolCalls: 1, files: 0 }]);
+      expect(await metrics()).toEqual([
+        { model: null, durationMs: 750, usage: null, toolCalls: 1, files: 0 },
+      ]);
     });
 
     it('gives no totals for a cancelled run', async () => {

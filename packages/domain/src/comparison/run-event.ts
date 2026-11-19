@@ -21,11 +21,13 @@ const finished = z.object({ kind: z.literal('finished'), outcome: RunOutcome });
 
 /**
  * One thing an agent reports while it works, in the vocabulary shared by every agent: what it says, the tools it
- * calls, what it consumed, and how it ended.
+ * calls, the model it runs on, what it consumed, and how it ended.
  */
 export const AgentEvent = z.discriminatedUnion('kind', [
   message,
   toolCall,
+  /** The model the agent runs on, as soon as it is known. */
+  z.object({ kind: z.literal('model'), model: z.string() }),
   z.object({ kind: z.literal('usage'), usage: Usage }),
   finished,
 ]);

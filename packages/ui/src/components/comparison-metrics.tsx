@@ -34,8 +34,12 @@ function inputTokens({ usage }: Metrics): ReactNode {
   );
 }
 
-/** The rows, in the order they are read. Tokens and cost are the agent's own report; the rest is measured. */
+/**
+ * The rows, in the order they are read. The model, tokens and cost are the agent's own report; the rest is
+ * measured.
+ */
 const ROWS: readonly { label: string; value: (metrics: Metrics) => ReactNode }[] = [
+  { label: 'Model', value: ({ model }) => model ?? NOT_REPORTED },
   { label: 'Duration', value: (metrics) => `${seconds.format(metrics.durationMs / 1000)} s` },
   { label: 'Input tokens', value: inputTokens },
   {

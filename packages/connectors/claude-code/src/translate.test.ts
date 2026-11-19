@@ -156,8 +156,12 @@ describe('Claude Code translator', () => {
     });
   });
 
+  it('names the model that answers, first: its full name, not the alias it was asked for', () => {
+    expect(replay('success').at(0)).toEqual({ kind: 'model', model: 'claude-haiku-5-5' });
+  });
+
   it('reads a refused model as a failure, although Claude Code calls the result a success', () => {
-    expect(replay('bad-model').filter((event) => event.kind !== 'usage')).toEqual([
+    expect(replay('bad-model').filter(({ kind }) => kind !== 'usage' && kind !== 'model')).toEqual([
       {
         kind: 'finished',
         outcome: {

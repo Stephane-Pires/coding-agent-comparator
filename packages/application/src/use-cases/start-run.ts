@@ -77,6 +77,7 @@ export const startRun = ({ agents, workspaces, clock, checkTask }: StartRunDeps)
     const workspace = created.value;
     const files = followFiles(workspaces, workspace);
     const toolCalls = new Set<string>();
+    let model: string | null = null;
     let usage: Usage | null = null;
     try {
       let outcome: RunOutcome | undefined;
@@ -85,6 +86,10 @@ export const startRun = ({ agents, workspaces, clock, checkTask }: StartRunDeps)
           if (event.kind === 'finished') {
             outcome = event.outcome;
             break;
+          }
+          if (event.kind === 'model') {
+            ({ model } = event);
+            continue;
           }
           if (event.kind === 'usage') {
             usage = event.usage;
@@ -106,6 +111,7 @@ export const startRun = ({ agents, workspaces, clock, checkTask }: StartRunDeps)
       if (outcome.status !== 'cancelled') {
         yield* files.changes();
         const metrics = {
+          model,
           durationMs: Math.round(clock.now() - startedAt),
           usage,
           toolCalls: toolCalls.size,
