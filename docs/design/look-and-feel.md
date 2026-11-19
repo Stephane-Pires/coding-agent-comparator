@@ -6,14 +6,15 @@ then in code.
 ## Colour
 
 Black or white (following the system's light or dark setting; there is no switch in the app) with one pink, a
-magenta (hue 345). **Pink has one job: what you can act on, and where you are.**
+magenta (hue 345). **Pink says three things: what you can act on, where you are, and what you asked.**
 
-| Role                                | Token                        | Light                                   | Dark                                     |
-| ----------------------------------- | ---------------------------- | --------------------------------------- | ---------------------------------------- |
-| The main action (Send): a pink fill | `--primary`                  | `oklch(0.56 0.2 345)`, white text 5.2:1 | `oklch(0.76 0.15 345)`, black text 8.6:1 |
-| Pink as text: links                 | `--brand` (`text-brand`)     | `oklch(0.53 0.2 345)`, 5.9:1            | `oklch(0.8 0.12 345)`, 10:1              |
-| Where you are: a selected item      | `--selected` (`bg-selected`) | `oklch(0.965 0.018 345)`                | `oklch(0.27 0.06 345)`                   |
-| Keyboard focus                      | `--ring`                     | `oklch(0.62 0.19 345)`, 4:1             | `oklch(0.72 0.16 345)`, 7.4:1            |
+| Role                                     | Token                        | Light                                   | Dark                                     |
+| ---------------------------------------- | ---------------------------- | --------------------------------------- | ---------------------------------------- |
+| The main action (Send): a pink fill      | `--primary`                  | `oklch(0.56 0.2 345)`, white text 5.2:1 | `oklch(0.76 0.15 345)`, black text 8.6:1 |
+| What you asked: the task of a comparison | `--asked`                    | `oklch(0.56 0.2 345)`, white text 5.2:1 | the same: white text in both themes      |
+| Pink as text: links                      | `--brand` (`text-brand`)     | `oklch(0.53 0.2 345)`, 5.9:1            | `oklch(0.8 0.12 345)`, 10:1              |
+| Where you are: a selected item           | `--selected` (`bg-selected`) | `oklch(0.965 0.018 345)`                | `oklch(0.27 0.06 345)`                   |
+| Keyboard focus                           | `--ring`                     | `oklch(0.62 0.19 345)`, 4:1             | `oklch(0.72 0.16 345)`, 7.4:1            |
 
 Everything else stays black, white and greys, with two tones for the state of a run:
 

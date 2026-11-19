@@ -43,6 +43,10 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
+  /* What you asked (the task of a comparison): white text on a deep pink, 5.2:1. The same in both themes: the
+     dark theme's lighter pink would need black text. */
+  --asked: oklch(0.56 0.2 345);
+  --asked-foreground: oklch(1 0 0);
   /* Pink fill: the main action (Send); white text on it, 5.2:1. */
   --primary: oklch(0.56 0.2 345);
   --primary-foreground: oklch(1 0 0);
@@ -102,6 +106,8 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-asked: var(--asked);
+  --color-asked-foreground: var(--asked-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
