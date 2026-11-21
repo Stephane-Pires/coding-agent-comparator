@@ -10,7 +10,7 @@
   "dependencies": {
     "@comparator/application": "workspace:*",
     "@comparator/domain": "workspace:*",
-    "@vercel/sandbox": "^4.1.0",
+    "@vercel/sandbox": "4.0.0",
     "neverthrow": "^8.2.0"
   }
 }

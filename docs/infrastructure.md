@@ -251,6 +251,11 @@ Vercel compiles the API to JavaScript, but our packages name a TypeScript file a
 it is. So `apps/server/vercel.json` keeps the packages' TypeScript sources in the function; without it the function
 builds and then fails at its first request, unable to find `@comparator/contracts/src/index.ts`.
 
+`@vercel/sandbox` is pinned to 4.0.0. From 4.1.0 it depends on `@vercel/drives`, a CommonJS package that loads an
+ES module with `require()`. Plain Node accepts that; the loader of a Vercel Function does not, and the function
+fails at its first request with `ERR_REQUIRE_ESM`. To check a later version before upgrading, load the built
+function with `node --no-experimental-require-module`.
+
 The hosted entry must never load an agent's SDK: a function holds 250 MB at most, and the agents weigh 700 MB.
 `tooling/hosted-entry.test.ts` follows every import from `src/index.ts` and fails if one leads to an SDK.
 
