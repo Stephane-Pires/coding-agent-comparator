@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { startRun, type CheckTask, type ReviewRun } from '@comparator/application';
 import { inMemoryWorkspaces, scriptedAgent, tickingClock, type Step } from '@comparator/application/testing';
 
-import { createApp } from './api.ts';
+import { createApp, WRONG_PASSWORD_WAIT_MS } from './api.ts';
 
 const accepts: CheckTask = () => Promise.resolve({ verdict: 'accepted' });
 const done: ReviewRun = () => Promise.resolve({ status: 'succeeded' });
@@ -224,6 +224,15 @@ describe('a private API', () => {
 
   it('says to anyone whether they are allowed', async () => {
     expect(await (await call('GET', '/api/access')).json()).toEqual({ allowed: false });
+  });
+
+  it('a wrong password is answered only after a wait, on the form and with a call', async () => {
+    const started = performance.now();
+    await call('POST', '/api/access', {}, { password: 'a guess' });
+    expect(performance.now() - started).toBeGreaterThanOrEqual(WRONG_PASSWORD_WAIT_MS - 50);
+    const again = performance.now();
+    await check({ authorization: 'Bearer another guess' });
+    expect(performance.now() - again).toBeGreaterThanOrEqual(WRONG_PASSWORD_WAIT_MS - 50);
   });
 
   it('a wrong password gives nothing', async () => {

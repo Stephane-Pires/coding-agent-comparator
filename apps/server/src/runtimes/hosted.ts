@@ -20,6 +20,12 @@ import type { Runtime } from '../container.ts';
  */
 const RUN_LIMIT_MS = 240_000;
 
+/**
+ * How much the hosted app may be used, by everyone together: 3 comparisons at once and 20 an hour, two runs each.
+ * The free plan allows 10 sandboxes at once; the hour keeps the keys and the monthly allowance safe.
+ */
+const LIMITS = { atOnce: 6, perHour: 40 };
+
 export function hostedRuntime(config: Config): Runtime {
   const { model, apiKey } = config.taskCheck;
   // `readConfig` refuses the sandbox runtime without both keys: this only tells the compiler so.
@@ -30,7 +36,7 @@ export function hostedRuntime(config: Config): Runtime {
         'claude-code': claudeCodeCommandLine(config.claudeCode),
         codex: codexCommandLine(config.codex),
       },
-      { runLimitMs: RUN_LIMIT_MS },
+      { runLimitMs: RUN_LIMIT_MS, limits: LIMITS },
     ),
     ...anthropicQuestions({ model, apiKey }),
   };

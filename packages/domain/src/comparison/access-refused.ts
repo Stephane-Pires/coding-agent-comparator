@@ -25,3 +25,14 @@ const REFUSALS = [
 export function accessRefused(reason: string): boolean {
   return REFUSALS.some((refusal) => refusal.test(reason));
 }
+
+/**
+ * What a provider says when it is limiting requests for now: too many at once, or too busy. Checked after
+ * `accessRefused`, because OpenAI answers an empty account with a 429 too: that one is the app's to fix, not a wait.
+ */
+const LIMITED = [/rate.?limit/i, /too many requests/i, /overloaded/i, /\b429\b/];
+
+/** Whether a run failed because its provider is limiting requests for now: trying again later can work. */
+export function rateLimited(reason: string): boolean {
+  return LIMITED.some((limit) => limit.test(reason));
+}

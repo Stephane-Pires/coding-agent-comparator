@@ -1,5 +1,5 @@
 import { Sandbox } from '@vercel/sandbox';
-import { ResultAsync } from 'neverthrow';
+import { errAsync, okAsync, ResultAsync } from 'neverthrow';
 
 import type { CodingAgent, Workspace, WorkspaceProvider } from '@comparator/application';
 import type { AgentEvent, AgentId, WorkspaceFile } from '@comparator/domain';
@@ -40,11 +40,51 @@ export interface SandboxLike {
   stop(): Promise<unknown>;
 }
 
+/** A sandbox as the list of the project's sandboxes shows it: when it was created, and how it stands. */
+export interface ListedSandbox {
+  readonly createdAt: number;
+  readonly status: string;
+}
+
+/** How much the hosted app may be used, by everyone together. */
+export interface UsageLimits {
+  /** Runs at the same time. */
+  readonly atOnce: number;
+  /** Runs started in the last hour. */
+  readonly perHour: number;
+}
+
 export interface SandboxOptions {
   /** The longest a run may take. A hosted API cannot hold a request for ever: the run ends before it is cut. */
   readonly runLimitMs: number;
+  readonly limits: UsageLimits;
   /** Creates a sandbox that lives at most `timeoutMs`. Replaced in tests. */
   readonly createSandbox?: (timeoutMs: number) => Promise<SandboxLike>;
+  /** The project's most recent sandboxes, newest first, at least `count` of them. Replaced in tests. */
+  readonly recentSandboxes?: (count: number) => Promise<readonly ListedSandbox[]>;
+}
+
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * Why a new run would go over the limits, or nothing when it would not. The count is Vercel's own list of the
+ * project's sandboxes, one per run: the app keeps no counter of its own. Two runs asked for at the same instant
+ * can both pass: the limits are a guard, not an exact quota.
+ */
+export function overLimits(
+  recent: readonly ListedSandbox[],
+  { atOnce, perHour }: UsageLimits,
+  now: number,
+): string | undefined {
+  const running = recent.filter(({ status }) => status === 'pending' || status === 'running').length;
+  if (running >= atOnce)
+    return `The hosted app is already running ${running} runs, its most at once. Wait a minute, then send the task again.`;
+  const lastHour = recent.filter(({ createdAt }) => createdAt > now - HOUR_MS);
+  if (lastHour.length < perHour) return undefined;
+  // A place frees up when the oldest run of the last hour turns one hour old.
+  const oldest = Math.min(...lastHour.map(({ createdAt }) => createdAt));
+  const minutes = Math.max(1, Math.ceil((oldest + HOUR_MS - now) / 60_000));
+  return `The hosted app has reached its limit of ${perHour} runs an hour. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`;
 }
 
 /** Where an agent works inside its sandbox. */
@@ -73,6 +113,9 @@ const realSandbox = async (timeoutMs: number): Promise<SandboxLike> =>
   // Not kept after it stops: a run's machine is thrown away with the run.
   Sandbox.create({ timeout: timeoutMs, persistent: false });
 
+const realRecentSandboxes = async (count: number): Promise<readonly ListedSandbox[]> =>
+  (await Sandbox.list({ limit: count, sortBy: 'createdAt', sortOrder: 'desc' })).sandboxes;
+
 /**
  * Agents that each run in a Vercel Sandbox of their own: a machine created for the run and destroyed after it.
  * This adapter never runs an agent itself. It sends the sandbox the agent's command, reads what the agent prints
@@ -82,7 +125,7 @@ const realSandbox = async (timeoutMs: number): Promise<SandboxLike> =>
  */
 export function sandboxRuntime(
   agents: Readonly<Record<AgentId, CommandLineAgent>>,
-  { runLimitMs, createSandbox = realSandbox }: SandboxOptions,
+  { runLimitMs, limits, createSandbox = realSandbox, recentSandboxes = realRecentSandboxes }: SandboxOptions,
 ): { readonly agents: Readonly<Record<AgentId, CodingAgent>>; readonly workspaces: WorkspaceProvider } {
   // The sandbox behind each workspace handed out, for as long as that workspace is in use.
   const sandboxes = new WeakMap<Workspace, SandboxLike>();
@@ -137,24 +180,37 @@ export function sandboxRuntime(
     },
   });
 
+  /** A new sandbox, with its workspace folder made. */
+  const createWorkspace = () =>
+    ResultAsync.fromPromise(
+      (async () => {
+        // The sandbox outlives the run's limit a little, so that its files can still be read after a cut.
+        const sandbox = await createSandbox(runLimitMs + 60_000);
+        await sandbox.runCommand('mkdir', ['-p', WORKSPACE_PATH]);
+        const workspace: Workspace = { path: WORKSPACE_PATH };
+        sandboxes.set(workspace, sandbox);
+        return workspace;
+      })(),
+      (error) => ({
+        kind: 'workspace-unavailable' as const,
+        reason: `Could not create a sandbox: ${error instanceof Error ? error.message : String(error)}`,
+      }),
+    );
+
   return {
     agents: { 'claude-code': agent(agents['claude-code']), codex: agent(agents.codex) },
     workspaces: {
       create: () =>
-        ResultAsync.fromPromise(
-          (async () => {
-            // The sandbox outlives the run's limit a little, so that its files can still be read after a cut.
-            const sandbox = await createSandbox(runLimitMs + 60_000);
-            await sandbox.runCommand('mkdir', ['-p', WORKSPACE_PATH]);
-            const workspace: Workspace = { path: WORKSPACE_PATH };
-            sandboxes.set(workspace, sandbox);
-            return workspace;
-          })(),
-          (error) => ({
-            kind: 'workspace-unavailable' as const,
-            reason: `Could not create a sandbox: ${error instanceof Error ? error.message : String(error)}`,
-          }),
-        ),
+        // The limits are read first. If they cannot be read, the run goes ahead: a guard that fails must not stop
+        // the app.
+        ResultAsync.fromPromise(recentSandboxes(limits.perHour + limits.atOnce), () => undefined)
+          .map((recent) => overLimits(recent, limits, Date.now()))
+          .orElse(() => okAsync(undefined))
+          .andThen((refusal) =>
+            refusal === undefined
+              ? createWorkspace()
+              : errAsync({ kind: 'workspace-unavailable' as const, reason: refusal }),
+          ),
       async read(workspace) {
         try {
           const listed = await sandboxOf(workspace).runCommand('node', ['-e', LIST_FILES, workspace.path]);

@@ -1,3 +1,5 @@
+import { setTimeout as wait } from 'node:timers/promises';
+
 import { OpenAPIGenerator } from '@orpc/openapi';
 import { OpenAPIHandler } from '@orpc/openapi/fetch';
 import { implement, ORPCError } from '@orpc/server';
@@ -26,6 +28,12 @@ export interface AppDeps {
 /** What a procedure knows of its request: the headers it came with, and those of its answer. */
 type Context = RequestHeadersPluginContext & ResponseHeadersPluginContext;
 
+/**
+ * How long a wrong password waits for its answer. It counts nothing, so it needs no store, and it turns guessing
+ * into one try a second for each open connection: a long password is then out of reach.
+ */
+export const WRONG_PASSWORD_WAIT_MS = 1000;
+
 /** A request that nobody can cancel still needs a signal. */
 const NEVER_ABORTED = new AbortController().signal;
 
@@ -50,17 +58,21 @@ export function createApp({ startRun, checkTask }: AppDeps, options: AccessOptio
   const access = createAccess(options);
   const os = implement(contract).$context<Context>();
   // What can start work, and so spend the API keys, is for those who gave the password.
-  const locked = os.middleware(({ context, next }) => {
-    if (!access.allows(context.reqHeaders ?? new Headers())) throw new ORPCError('UNAUTHORIZED');
-    return next();
+  const locked = os.middleware(async ({ context, next }) => {
+    const headers = context.reqHeaders ?? new Headers();
+    if (access.allows(headers)) return next();
+    // A password sent with the call was wrong: it costs the same wait as on the form.
+    if (headers.has('authorization')) await wait(WRONG_PASSWORD_WAIT_MS);
+    throw new ORPCError('UNAUTHORIZED');
   });
   const router = os.router({
     access: {
       get: os.access.get.handler(({ context }) => ({
         allowed: access.allows(context.reqHeaders ?? new Headers()),
       })),
-      enter: os.access.enter.handler(({ input, context }) => {
+      enter: os.access.enter.handler(async ({ input, context }) => {
         const allowed = access.isPassword(input.password);
+        if (!allowed) await wait(WRONG_PASSWORD_WAIT_MS);
         if (allowed && access.required) context.resHeaders?.set('set-cookie', access.passCookie());
         return { allowed };
       }),

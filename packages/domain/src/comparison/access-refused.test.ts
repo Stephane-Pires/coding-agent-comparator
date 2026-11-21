@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { accessRefused } from './access-refused.ts';
+import { accessRefused, rateLimited } from './access-refused.ts';
 
 describe('accessRefused', () => {
   it.each([
@@ -25,4 +25,22 @@ describe('accessRefused', () => {
   ])('leaves an ordinary failure alone: %s', (reason) => {
     expect(accessRefused(reason)).toBe(false);
   });
+});
+
+describe('rateLimited', () => {
+  it.each([
+    // The providers' documented words for too many requests, or a busy service; not seen here.
+    'API Error: 429 {"type":"error","error":{"type":"rate_limit_error","message":"Number of requests has exceeded your rate limit"}}',
+    'API Error: 529 {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}',
+    'unexpected status 429 Too Many Requests: Rate limit reached for gpt-6-luna in organization org-x on tokens per min.',
+  ])('recognises a provider that is limiting requests for now: %s', (reason) => {
+    expect(rateLimited(reason)).toBe(true);
+  });
+
+  it.each(['The agent exited with code 1.', 'npm test failed: expected 401 but the server answered 200'])(
+    'leaves an ordinary failure alone: %s',
+    (reason) => {
+      expect(rateLimited(reason)).toBe(false);
+    },
+  );
 });

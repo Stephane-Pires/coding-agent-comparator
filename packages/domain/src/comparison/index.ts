@@ -1,4 +1,4 @@
-export { accessRefused } from './access-refused.ts';
+export { accessRefused, rateLimited } from './access-refused.ts';
 export { AgentId } from './agent.ts';
 export { AgentEvent, RunEvent, RunOutcome } from './run-event.ts';
 export { reviewedOutcome, RUN_REVIEW_JSON_SCHEMA, RunReview } from './run-review.ts';

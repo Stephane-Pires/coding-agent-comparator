@@ -221,8 +221,25 @@ API keys, and it has a public address of its own, so the lock is there and nowhe
 - **A hosted API without `DEMO_PASSWORD` does not start.** Nothing is left open by forgetting the setting.
 - On a dev machine no password is set and everyone is allowed. The end-to-end tests set one, so they run the app as
   it is hosted.
-- Known limits: the page itself and its scripts are served to anyone; they hold no data, and no call works without
-  the password. Nothing slows down someone who tries passwords one after another, so choose a long one.
+- A wrong password, on the form or sent with a call, is answered only after one second. Nothing is counted, so
+  nothing is stored; guessing a long password becomes impractical.
+- Known limit: the page itself and its scripts are served to anyone; they hold no data, and no call works without
+  the password.
+
+### Limits on use
+
+The hosted app limits how much it is used, by everyone together: **6 runs at once and 40 runs an hour**, so 3
+comparisons at once and 20 an hour (`apps/server/src/runtimes/hosted.ts`). The app keeps no counter: before a run
+creates its sandbox, the API reads Vercel's list of the project's sandboxes, newest first (about 0.3 s), and counts
+those running and those created in the last hour. Over a limit, the run does not start and says which limit, and
+when to try again.
+
+- Two runs asked for at the same instant can both pass: the limits are a guard, not an exact quota.
+- If Vercel's list cannot be read, the run goes ahead: a guard that fails does not stop the app.
+- On a dev machine there are no sandboxes, and no limits.
+- When a provider itself limits requests, the run ends saying the provider is busy and to try again in a minute;
+  the provider's words go to the server's log.
+- The hard limit on the bill is a spending cap on each API key, set at Anthropic and OpenAI.
 
 ### What differs from a dev machine
 
@@ -234,6 +251,7 @@ API keys, and it has a public address of its own, so the lock is there and nowhe
 | Credentials          | Keys or logins                                    | Keys only                                         |
 | Password             | None                                              | Required                                          |
 | Longest run          | No limit                                          | 240 seconds, under the 300 a function may last    |
+| Use                  | No limit                                          | 6 runs at once, 40 an hour                        |
 
 Vercel compiles the API to JavaScript, but our packages name a TypeScript file as their entry, which Node runs as
 it is. So `apps/server/vercel.json` keeps the packages' TypeScript sources in the function; without it the function
