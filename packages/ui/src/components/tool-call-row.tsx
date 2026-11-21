@@ -18,7 +18,7 @@ import { ICONS } from '@comparator/ui/icons';
 import { cn } from '@comparator/ui/lib/utils';
 
 /** The word and the tone of each status. Colour is never the only signal: the icon and the word say it too. */
-const STATUSES: Record<ToolCall['status'], { label: string; tone: string }> = {
+export const STATUSES: Record<ToolCall['status'], { label: string; tone: string }> = {
   running: { label: 'Running', tone: 'text-muted-foreground' },
   succeeded: { label: 'Done', tone: 'text-success' },
   failed: { label: 'Failed', tone: 'text-destructive' },
@@ -34,7 +34,7 @@ function diffBlock(diff: string): string {
 }
 
 /** What a call is shown as on its one line: what the agent ran, searched, edited or used. */
-function titleOf(tool: Tool): { text: string; code: boolean; before?: string } {
+export function titleOf(tool: Tool): { text: string; code: boolean; before?: string } {
   if (tool.type === 'command') return { text: tool.command, code: true };
   if (tool.type === 'file-edit') return { text: tool.path, code: true, before: CHANGES[tool.change] };
   if (tool.type === 'web-search') return { text: tool.query || 'Searching the web', code: false };

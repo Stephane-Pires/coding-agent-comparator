@@ -66,33 +66,62 @@ an action: it sits before its label, or, where space is short, carries a tooltip
 
 ## Motion
 
-Motion only shows the result of something the user just did, so they can follow where it went.
+**Motion belongs to the run: the slope, its tracks, its finish. Anywhere else, it only answers what the user just
+did.** A motion that explains nothing is left out.
 
-| Duration                             | For                             |
-| ------------------------------------ | ------------------------------- |
-| 120 ms (`--duration-fast`)           | colour changes: hover and press |
-| 180 ms (`--duration-base`, ease-in)  | something leaving               |
-| 240 ms (`--duration-slow`, ease-out) | something moving                |
+The reason is a sentence about who made this: Stéphane Pires makes interfaces where every motion explains
+something, and he signs his work. In his own words: "soft touch, non intrusive, motion should always help the
+interface become more understandable".
 
-Dialogs and menus keep their library's short defaults. Never: on page load, numbers counting up, bounces, ambient
-pulses, anything that delays a click.
+### The run
 
-One stated exception: **a run in progress shows a spinner**, and text appears as the agent writes it. Both report
-work that is happening now; neither is decoration.
+The slope is where a comparison happens (`components/run-tracks.tsx`). It is the one thing a visitor should
+remember.
 
-A second one: **the tracks of the empty page's picture draw themselves once**, together, in 1.2 s, when the page
-opens. It is the product's one piece of character, shown before any work exists. With the system's reduced-motion setting nothing moves (the CSS
-durations become 0) and the spinner stays as a still icon.
+| Moment               | Trigger                   | What moves                                                                                                                            | Time                      | What it tells                                                   |
+| -------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------- |
+| The slope waits      | The empty page opens      | The two tracks of the picture draw themselves once                                                                                    | 1.2 s                     | Two agents, one slope                                           |
+| A run is under way   | Events of the run         | Its track grows; a gate appears where each tool call started; the slope scrolls sideways to follow once the tracks outgrow their room | live, a tick every 250 ms | Both agents work, and who is ahead                              |
+| A run ends           | Its outcome arrives       | Its flag and its time appear on the track                                                                                             | 240 ms                    | It ended, in this time                                          |
+| Every agent finished | The last run did its task | Pink snow falls once over the page                                                                                                    | 5 s                       | The one celebration: never for a run that failed or was stopped |
 
-A third one: **the logo answers a pointer**: its hat hops once and its cursor blinks while it is pointed at, to say
-that it can be clicked (a click goes back to the start page).
+The scale of the slope never changes: one turn of a track is one second. A run is never redrawn at another size;
+its track only gets longer, a run that ended stays where it ended, and the slope can be scrolled back afterwards.
 
-Within the rule, not an exception: **the padlock of the password page shakes once after a wrong password**, in
-320 ms. It shows the result of what the user just did.
+A gate that is pointed at says when exactly, what was called and how it stands.
 
-A fourth one: **pink snow falls once over the page when every agent of a comparison finished**, for about five
-seconds. It is the product's one celebration: it never loops, never falls for a run that failed or was stopped, and
-catches no click.
+The tracks are drawn from what happens: a gate stands at the moment the browser learnt of the tool call, and the
+track ends when the run does. The time written at the flag is the API's measure of the run.
+
+A run in progress also shows a spinner, and text appears as the agent writes it: both report work happening now.
+
+### Answers to the user
+
+| Trigger                    | What moves                                                        | Time                                 |
+| -------------------------- | ----------------------------------------------------------------- | ------------------------------------ |
+| Hover, press               | Colour                                                            | 120 ms (`--duration-fast`)           |
+| Something leaves           | It fades                                                          | 180 ms (`--duration-base`, ease-in)  |
+| Something moves or arrives | It moves                                                          | 240 ms (`--duration-slow`, ease-out) |
+| A wrong password           | The padlock shakes once                                           | 320 ms                               |
+| The right password         | The padlock's shackle lifts, then the locker gives way to the app | 240 ms, then 240 ms                  |
+| The logo is pointed at     | Its hat hops once and its cursor blinks: it can be clicked        | 500 ms                               |
+
+Dialogs and menus keep their library's short defaults.
+
+### Never
+
+Numbers counting up, bounces, ambient pulses, anything that loops with no work behind it. Nothing moves by being
+laid out again: a mark on a track is moved (`translate`), and the tracks sit above the runs, where nothing that
+arrives can push them.
+
+Tried and dropped: the slope picture moving into the comparison when the first task is sent. It blended a small
+picture into a wide block of text, two unlike things, and explained nothing.
+
+### Reduced motion
+
+With the system's setting, nothing moves: the CSS durations become 0, the changes of page are made at once, the
+tracks and their gates are simply where they stand, and the spinner is a still icon. The right password opens the
+app without the wait for the padlock.
 
 ## Voice
 
@@ -115,7 +144,9 @@ already called it a "run"; the voice takes that word seriously, lightly, the way
   "Off the marked runs." then "This page is not on the map."; a failure on our side is "The lift is stopped." then
   "Something broke on our side." The password page follows them: "The ski locker is locked." then "This app is
   private. Enter its password to start a run."
-- Numbers, errors and code stay plain. The reason a run did not finish is the agent's own words, never rewritten.
+- Numbers, errors and code stay plain. The reason a run did not finish is the agent's own words, never rewritten. One exception: when a provider
+  refused the app itself (a key it does not know, no credit left, a quota used up), the visitor is told that it is a
+  problem with the app, not with their task; the provider's words go to the server's log.
 
 ## Layout
 

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { ErrorScreen, OffPiste, StoppedLift } from '@comparator/ui/components/error-screen';
 import { PageHeader } from '@comparator/ui/components/page-header';
+import { Signature } from '@comparator/ui/components/signature';
 import { Button } from '@comparator/ui/components/ui/button';
 
 /** The frame of a page that has only a message: the header, and the message in the middle of what is left. */
@@ -12,6 +13,9 @@ function ErrorPage({ title, children }: { title: string; children: ReactNode }) 
         <PageHeader title={title} />
       </div>
       <main className="page-frame flex min-h-0 flex-1">{children}</main>
+      <footer className="page-frame py-2">
+        <Signature />
+      </footer>
     </div>
   );
 }

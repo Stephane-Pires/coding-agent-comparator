@@ -50,6 +50,10 @@ test('a task runs on both agents: each shows what it did, the file it left, and 
   for (const agent of AGENTS) {
     const run = column(page, agent);
     await expect(run.getByRole('status').first()).toHaveText('Finished');
+    // Its track on the slope: it reached the finish.
+    await expect(page.getByRole('figure', { name: 'The runs over time' })).toContainText(
+      `${agent}: finished`,
+    );
     // What the agent did: at least one tool call that ended.
     await expect(run.getByText('Done').first()).toBeVisible();
     // What it left.

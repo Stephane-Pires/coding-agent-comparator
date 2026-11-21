@@ -10,6 +10,7 @@ import {
 } from '@comparator/ui/components/ai-elements/conversation';
 import { EmptyComparison } from '@comparator/ui/components/empty-comparison';
 import { PageHeader } from '@comparator/ui/components/page-header';
+import { Signature } from '@comparator/ui/components/signature';
 import type { TaskCheckState } from '@comparator/ui/components/task-check-notice';
 import { TaskInput } from '@comparator/ui/components/task-input';
 
@@ -21,7 +22,9 @@ import { Comparison, UnstartedComparison, type ComparisonRun } from './compariso
 interface SentComparison {
   readonly id: string;
   readonly task: Task;
-  readonly state: TaskCheckState | { readonly status: 'started'; readonly runs: readonly ComparisonRun[] };
+  readonly state:
+    | TaskCheckState
+    | { readonly status: 'started'; readonly runs: readonly ComparisonRun[]; readonly startedAt: number };
 }
 
 export function ChatPage() {
@@ -48,7 +51,7 @@ export function ChatPage() {
       else if (verdict.verdict === 'refused') become({ status: 'refused', reason: verdict.reason });
       else {
         const runs = AgentId.options.map((agent) => ({ agent, chat: startRunChat(agent, task) }));
-        become({ status: 'started', runs });
+        become({ status: 'started', runs, startedAt: performance.now() });
         setInProgress((count) => count + runs.length);
       }
       setInProgress((count) => count - 1);
@@ -77,7 +80,13 @@ export function ChatPage() {
           <ConversationContent className="page-frame gap-8 py-4">
             {comparisons.map(({ id, task, state }) =>
               state.status === 'started' ? (
-                <Comparison key={id} task={task} runs={state.runs} onRunSettled={onSettled} />
+                <Comparison
+                  key={id}
+                  task={task}
+                  runs={state.runs}
+                  startedAt={state.startedAt}
+                  onRunSettled={onSettled}
+                />
               ) : (
                 <UnstartedComparison key={id} task={task} state={state} />
               ),
@@ -86,8 +95,9 @@ export function ChatPage() {
           <ConversationScrollButton />
         </Conversation>
       )}
-      <div className="page-frame border-t py-4">
+      <div className="page-frame flex flex-col gap-2 border-t pt-4 pb-2">
         <TaskInput running={inProgress > 0} onSend={send} onStop={stop} />
+        <Signature />
       </div>
     </div>
   );

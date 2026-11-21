@@ -1,11 +1,12 @@
 'use client';
 
 import { useChat, type Chat } from '@ai-sdk/react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { AgentId, RunStatus } from '@comparator/contracts';
 import type { RunResult } from '@comparator/ui/components/comparison-metrics';
 import { RunColumn, type RunItem } from '@comparator/ui/components/run-column';
+import type { RunTrack } from '@comparator/ui/components/run-tracks';
 
 import type { RunMessage } from '../lib/run-chat.ts';
 
@@ -13,14 +14,21 @@ import type { RunMessage } from '../lib/run-chat.ts';
 const UNREACHABLE =
   'The run could not be followed: the API did not answer. Check that it is running, then send again.';
 
-/** One agent's run, followed live. Tells its parent once, when the run is over: how it ended, and its totals. */
+/**
+ * One agent's run, followed live. Tells its parent once, when the run is over: how it ended, and its totals. And
+ * tells it, each time something happens, where the run stands on its track: `clock` gives the time to stamp it.
+ */
 export function Run({
   agent,
   chat,
+  clock,
+  onTrack,
   onSettled,
 }: {
   agent: AgentId;
   chat: Chat<RunMessage>;
+  clock: () => number;
+  onTrack: (track: RunTrack) => void;
   onSettled: (result: RunResult) => void;
 }) {
   const { messages, status: stream } = useChat({ chat });
@@ -57,6 +65,37 @@ export function Run({
     // Once, when the run settles: its status and totals do not change after that.
     if (settled) onSettled({ agent, status, metrics });
   }, [settled, onSettled]);
+
+  // When each tool call was first seen, and when the run ended: the browser's own times, since the stream carries
+  // none. They place the gates and the end of the track; the duration shown is the API's.
+  const [seen, setSeen] = useState<ReadonlyMap<string, number>>(new Map());
+  const [endedAt, setEndedAt] = useState<number>();
+  const calls = items.flatMap((item) => (item.type === 'tool-call' ? [item.call] : []));
+  const callIds = calls.map(({ id }) => id).join(' ');
+  useEffect(() => {
+    const at = clock();
+    setSeen((previous) => {
+      const fresh = calls.filter(({ id }) => !previous.has(id));
+      return fresh.length === 0
+        ? previous
+        : new Map([...previous, ...fresh.map(({ id }) => [id, at] as const)]);
+    });
+  }, [callIds, clock]);
+  useEffect(() => {
+    if (settled) setEndedAt(clock());
+  }, [settled, clock]);
+  const track: RunTrack = {
+    agent,
+    status,
+    gates: calls.flatMap(({ id, status: callStatus, tool }) => {
+      const at = seen.get(id);
+      return at === undefined ? [] : [{ id, at, status: callStatus, tool }];
+    }),
+    endedAt,
+    durationMs: metrics?.durationMs,
+  };
+  const trackKey = JSON.stringify(track);
+  useEffect(() => onTrack(track), [trackKey, onTrack]);
 
   return <RunColumn agent={agent} status={status} items={items} files={files} reason={reason} />;
 }

@@ -228,6 +228,39 @@
 .logo-button:focus-visible .logo-cursor {
   animation: logo-cursor 900ms steps(1, end) infinite;
 }
+/* The tracks of a comparison (components/run-tracks.tsx). A track is a line of turns, one turn per second: the
+   tile below is 28 px wide, the PX_PER_SECOND of the component. The course is the whole line, faint; the track is
+   the same line in pink, shown up to where the run stands. The clock ticks four times a second: a track and what
+   stands on it glide from one tick to the next, so a run is seen moving, not jumping. */
+.run-course,
+.run-track {
+  position: absolute;
+  inset: 0;
+  mask-repeat: repeat-x;
+  mask-size: 28px 24px;
+}
+.run-course {
+  background: var(--border);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='24'%3E%3Cpath d='M0 12q7 -7 14 0t14 0' fill='none' stroke='black' stroke-width='1'/%3E%3C/svg%3E");
+}
+.run-track {
+  background: var(--brand);
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='24'%3E%3Cpath d='M0 12q7 -7 14 0t14 0' fill='none' stroke='black' stroke-width='2'/%3E%3C/svg%3E");
+  transition: clip-path 250ms linear;
+}
+.run-mark {
+  transition: translate 250ms linear;
+}
+/* What lands on a track when its run ends: the flag, and the time. */
+@keyframes run-arrival {
+  from {
+    opacity: 0;
+  }
+}
+.run-arrival {
+  animation: run-arrival var(--duration-slow) ease-out;
+}
+
 /* The padlock of the password page says no: it shakes once after a wrong password. */
 @keyframes padlock-refused {
   20%,
@@ -241,6 +274,22 @@
 }
 .padlock-refused {
   animation: padlock-refused 320ms ease-out;
+}
+
+/* It says yes: its shackle lifts after the right password, just before the page gives way to the app. */
+.padlock-shackle {
+  transition: transform var(--duration-slow) ease-out;
+}
+.padlock-open .padlock-shackle {
+  transform: translateY(-5px);
+}
+
+/* A change of page the browser animates (apps/web, `withViewTransition`): the old page fades into the new one. */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: var(--duration-slow);
+  animation-timing-function: ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {

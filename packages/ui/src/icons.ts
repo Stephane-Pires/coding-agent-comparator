@@ -9,6 +9,7 @@ import {
   Eye,
   EyeOff,
   FilePen,
+  Flag,
   Globe,
   Hexagon,
   LoaderCircle,
@@ -49,6 +50,8 @@ export const ICONS = {
   expand: ChevronDown,
   send: ArrowUp,
   stop: Square,
+  /** The end of a run that did its task, on its track. */
+  finish: Flag,
   /** What a press would do to a hidden field: show it, or hide it again. */
   reveal: { show: Eye, hide: EyeOff },
 };

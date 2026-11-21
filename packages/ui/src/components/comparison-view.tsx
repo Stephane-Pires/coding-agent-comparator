@@ -3,16 +3,21 @@ import type { ReactNode } from 'react';
 import { Message, MessageContent } from '@comparator/ui/components/ai-elements/message';
 
 /**
- * One comparison: the task that was sent, then one run per agent, side by side when there is room, then what
- * `summary` gives: the runs in numbers, once they have ended.
+ * One comparison: the task that was sent, then what `tracks` gives: the runs on their slope. Then one run per
+ * agent, side by side when there is room, then what `summary` gives: the runs in numbers, once they have ended.
+ *
+ * The tracks stay in view at the top while the runs under them grow and scroll: they are the comparison at a
+ * glance, and nothing that arrives below can push them.
  * The columns follow the page grid, read on the width this block really gets.
  */
 export function ComparisonView({
   task,
+  tracks,
   children,
   summary,
 }: {
   task: string;
+  tracks?: ReactNode;
   children: ReactNode;
   summary?: ReactNode;
 }) {
@@ -24,6 +29,7 @@ export function ComparisonView({
           {task}
         </MessageContent>
       </Message>
+      {tracks ? <div className="sticky top-0 z-10">{tracks}</div> : null}
       <div className="page-grid *:col-span-full @cols-8:*:col-span-4 @cols-12:*:col-span-6">{children}</div>
       {summary}
     </article>

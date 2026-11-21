@@ -7,8 +7,13 @@ import { ICONS } from '@comparator/ui/icons';
 /**
  * For the password page: a row of ski lockers in the snow, a padlock on the middle one, and a pair of skis left
  * leaning against the side. The padlock shakes once when `refused` becomes true: the answer to a wrong password.
+ * Its shackle lifts when `opened`: the answer to the right one.
  */
-export function SkiLocker({ refused = false, ...props }: SVGProps<SVGSVGElement> & { refused?: boolean }) {
+export function SkiLocker({
+  refused = false,
+  opened = false,
+  ...props
+}: SVGProps<SVGSVGElement> & { refused?: boolean; opened?: boolean }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 120" aria-hidden="true" {...props}>
       <path className="fill-muted" d="M0 120V104Q60 96 120 100T240 98V120Z" />
@@ -39,9 +44,9 @@ export function SkiLocker({ refused = false, ...props }: SVGProps<SVGSVGElement>
         <path d="M98 66V76M142 66V76" />
       </g>
       {/* the padlock */}
-      <g className={refused ? 'padlock-refused' : undefined}>
+      <g className={opened ? 'padlock-open' : refused ? 'padlock-refused' : undefined}>
         <path
-          className="stroke-brand"
+          className="padlock-shackle stroke-brand"
           fill="none"
           strokeWidth="3"
           strokeLinecap="round"
@@ -62,6 +67,7 @@ export function PasswordGate({
   action,
   error,
   pending = false,
+  opened = false,
 }: {
   /** Receives the form; the password is its `password` field. */
   action: ComponentProps<'form'>['action'];
@@ -69,6 +75,8 @@ export function PasswordGate({
   error?: string | undefined;
   /** The password is being checked. */
   pending?: boolean;
+  /** The password was right: the padlock opens. */
+  opened?: boolean;
 }) {
   const id = useId();
   // The password is hidden as it is typed; the eye shows it, to check it before sending.
@@ -78,7 +86,7 @@ export function PasswordGate({
   return (
     <div className="flex size-full flex-col items-center justify-center gap-3 p-8 text-center">
       {/* Not while the password is checked: a second wrong one makes the padlock shake again. */}
-      <SkiLocker className="w-60" refused={error !== undefined && !pending} />
+      <SkiLocker className="w-60" refused={error !== undefined && !pending} opened={opened} />
       <h2 className="text-lg font-medium">The ski locker is locked.</h2>
       <p className="text-sm text-muted-foreground">This app is private. Enter its password to start a run.</p>
       <form action={action} className="mt-2 flex w-full max-w-xs flex-col gap-2 text-left">
