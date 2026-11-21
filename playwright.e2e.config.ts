@@ -3,12 +3,16 @@ import { defineConfig, devices } from '@playwright/test';
 // Drives the real page in a browser, on a production build of the web app and on the API.
 //   pnpm test:e2e       the runs are recordings of real ones (fixtures/recordings.json): no key, no login.
 //   pnpm test:e2e:live  the same tests on the real Claude Code and Codex, with your keys or logins.
+//   pnpm test:e2e:sandbox  the same again, with each agent in a Vercel Sandbox, as when the app is hosted. It needs
+//                       both keys and a sandbox token (VERCEL_OIDC_TOKEN) in the environment.
 // The first guards our own code and can run at any time. The second is the only one that sees an agent change
 // what it sends: run it by hand after upgrading an agent's SDK, then make the recordings again.
 //   pnpm test:e2e:film  the recorded tests at a speed a person can follow, filmed: one video per test, under
 //                       its name, in e2e-videos/. To review what a run did, or to put in the docs.
 // Both start their own API and web app, on their own ports, beside a dev server if one is running.
-const live = process.env['E2E_RUNTIME'] === 'local';
+// What runs the tasks: recordings unless told otherwise.
+const runtime = process.env['E2E_RUNTIME'] ?? 'recorded';
+const live = runtime !== 'recorded';
 // Filmed for a person to watch afterwards: each action is followed by a pause, the recorded agents report their
 // steps slowly, and a video is kept (see tooling/e2e/app.spec.ts). No window is shown: a film of a visible window
 // depends on the screen and the window tools of whoever runs it.
@@ -42,7 +46,7 @@ export default defineConfig({
       command: 'node apps/server/src/main.ts',
       env: {
         PORT: API_PORT,
-        AGENT_RUNTIME: live ? 'local' : 'recorded',
+        AGENT_RUNTIME: runtime,
         // How far apart a recorded agent's steps are: quick for a check, slow enough to read for a person.
         RECORDED_PACE_MS: filmed ? '700' : '60',
       },

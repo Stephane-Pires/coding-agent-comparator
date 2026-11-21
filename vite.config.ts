@@ -78,6 +78,7 @@ export default defineConfig({
           'packages/connectors/*/src/**',
           'packages/workspace-local/src/**',
           'packages/runtime-recorded/src/**',
+          'packages/runtime-sandbox/src/**',
         ],
         excludeFiles: ['**/*.test.ts'],
         rules: {

@@ -75,6 +75,7 @@ export const RULES: Readonly<Record<string, PackageRule>> = {
   '@comparator/connector-anthropic-api': adapter('packages/connectors/anthropic-api'),
   '@comparator/workspace-local': adapter('packages/workspace-local'),
   '@comparator/runtime-recorded': adapter('packages/runtime-recorded'),
+  '@comparator/runtime-sandbox': adapter('packages/runtime-sandbox'),
   // It also imports itself by name: the form shadcn's generated components use.
   '@comparator/ui': ui('packages/ui', ['@comparator/contracts', '@comparator/ui']),
   '@comparator/server': {

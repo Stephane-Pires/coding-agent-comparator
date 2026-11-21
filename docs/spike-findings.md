@@ -245,9 +245,25 @@ its environment that could carry a credential.
 One caution about where the keys are kept: a tool that watches the project folder can see `.env`, though git ignores
 it. Keys for this project should be made for it, with a spending cap, or kept in a file outside the folder.
 
+## In a sandbox, with API keys
+
+Measured on 2026-11-21 (ticket 24), with the agents of Vercel's image: Claude Code 2.1.325 and Codex 0.169.0.
+
+| Question                                    | Answer                                                                                                |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Does each agent finish a task in a sandbox? | Yes, on its key alone. Claude Code reports the key as its credential.                                 |
+| Do our translators read what they print?    | Yes, unchanged: `claude --print … stream-json` and `codex exec --json` print the SDKs' events.        |
+| How fast?                                   | Sandbox in 0.3 s, first event at 1.6 s, the hello task done in 3.9 s (Claude Code) and 5.1 s (Codex). |
+| Through the API, one whole run?             | 8 to 10 seconds, with the task check, the review, the file reads and the stop.                        |
+| Is a sandbox left running?                  | No: after a finish, a failure, a reached limit and an abandoned request, all were stopped.            |
+
+- **Codex's inner sandbox does not start there**: every command fails with a `bwrap` error, and Codex ends its run
+  saying it could do nothing. With `--sandbox danger-full-access` it works; the Vercel Sandbox is the isolation.
+- The Vercel command line cannot link a project from inside a git worktree (`ENOTDIR`); it was linked from a plain
+  folder.
+
 ## Still to verify
 
-- A full agent run inside a sandbox (ticket 24, with the API keys).
 - Restricting Claude Code's tool list with `tools` or `disallowedTools`, and what each Codex switch does: first step of
   ticket 10b (DEV-199, tool access).
 - Rate-limit events from both agents: parked ticket DEV-198 (rate limits).

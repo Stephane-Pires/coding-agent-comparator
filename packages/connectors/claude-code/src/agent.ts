@@ -12,7 +12,7 @@ interface ClaudeCodeOptions {
 }
 
 /** Tools approved in advance, so a run never waits for a person to answer a permission prompt. */
-const ALLOWED_TOOLS = ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash', 'WebSearch', 'WebFetch'];
+export const ALLOWED_TOOLS = ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash', 'WebSearch', 'WebFetch'];
 
 export function claudeCodeAgent({ model, apiKey }: ClaudeCodeOptions): CodingAgent {
   return {

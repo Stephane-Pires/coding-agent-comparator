@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 // The same tests run on recorded runs and on the real agents (see playwright.e2e.config.ts). So they look at what
 // holds for any run, not at an agent's exact words: a status, a file, a row of numbers.
-const live = process.env['E2E_RUNTIME'] === 'local';
+const live = (process.env['E2E_RUNTIME'] ?? 'recorded') !== 'recorded';
 const AGENTS = ['Claude Code', 'Codex'];
 // `pnpm test:e2e:film`: the test is slowed down and filmed, for a person to watch afterwards.
 const filmed = process.env['E2E_FILM'] === '1';

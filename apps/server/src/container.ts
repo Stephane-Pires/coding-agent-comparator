@@ -7,11 +7,13 @@ import { checkTask, reviewRun, startRun } from '@comparator/application';
 import { anthropicQuestions } from '@comparator/connector-anthropic-api';
 import {
   claudeCodeAgent,
+  claudeCodeCommandLine,
   claudeCodeRunReviewer,
   claudeCodeTaskClassifier,
 } from '@comparator/connector-claude-code';
-import { codexAgent } from '@comparator/connector-codex';
+import { codexAgent, codexCommandLine } from '@comparator/connector-codex';
 import { recordedRuntime, Recording, type RecordedRuntime } from '@comparator/runtime-recorded';
+import { sandboxRuntime } from '@comparator/runtime-sandbox';
 import { localWorkspaces } from '@comparator/workspace-local';
 
 import type { AppDeps } from './app.ts';
@@ -47,14 +49,35 @@ function localRuntime(config: Config): RecordedRuntime {
   };
 }
 
+/**
+ * The real agents, each in a Vercel Sandbox: a machine made for the run and destroyed after it. Each agent is
+ * started there by its own command, with its own key and nothing else of ours.
+ */
+function hostedRuntime(config: Config): RecordedRuntime {
+  return {
+    ...sandboxRuntime(
+      {
+        'claude-code': claudeCodeCommandLine(config.claudeCode),
+        // Codex's own inner sandbox cannot start inside a Vercel Sandbox, which already isolates the run.
+        codex: codexCommandLine({ ...config.codex, confinement: 'danger-full-access' }),
+      },
+      { runLimitMs: config.sandboxRunLimitMs },
+    ),
+    ...questions(config),
+  };
+}
+
 /** The composition root: the only place that knows which adapter stands behind each port. */
 export function createContainer(config: Config): AppDeps {
-  const { agents, workspaces, classifier, reviewer } =
-    config.runtime === 'recorded'
-      ? recordedRuntime(z.array(Recording).parse(JSON.parse(readFileSync(RECORDINGS_FILE, 'utf8'))), {
-          paceMs: config.recordedPaceMs,
-        })
-      : localRuntime(config);
+  const runtimes = {
+    local: () => localRuntime(config),
+    sandbox: () => hostedRuntime(config),
+    recorded: () =>
+      recordedRuntime(z.array(Recording).parse(JSON.parse(readFileSync(RECORDINGS_FILE, 'utf8'))), {
+        paceMs: config.recordedPaceMs,
+      }),
+  };
+  const { agents, workspaces, classifier, reviewer } = runtimes[config.runtime]();
   // One check for the whole API: a run finds the verdict its comparison already asked for.
   const check = checkTask({ classifier });
   return {

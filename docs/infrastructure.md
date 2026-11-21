@@ -78,6 +78,34 @@ The question takes the same route as the task check, on the model set by `TASK_C
 the API, about three through Claude Code. That time is not counted in the run's duration. If the model cannot be reached, the run counts as
 finished. `pnpm eval:run-review` measures the instructions on the labelled runs of `fixtures/run-review.json`.
 
+### The agents in a sandbox
+
+With `AGENT_RUNTIME=sandbox` each agent runs in a Vercel Sandbox of its own: a Linux machine made for the run and
+destroyed after it. It is the only way to run an agent when the API is hosted, where there is no machine of ours,
+and it can be used from a dev machine too.
+
+The API never runs an agent itself there. For one run it:
+
+1. asks Vercel for a sandbox (about 0.3 seconds);
+2. sends it the agent's own command, `claude --print … --output-format stream-json` or `codex exec --json …`, with
+   that agent's API key and nothing else of ours;
+3. reads what the agent prints, one JSON event per line, as it is printed, and gives each line to the same
+   translator as on a dev machine;
+4. asks the sandbox for the files of the folder after each tool call that ended, and at the end;
+5. stops the sandbox, whether the run finished, failed, was stopped by the user or reached its limit.
+
+Three things differ from a run on a dev machine:
+
+- **The agents are those of Vercel's image**, not the versions our lockfile pins. Nothing is installed, which is
+  why an agent's first event comes about 1.6 seconds after the sandbox is asked for.
+- **Codex's own inner sandbox is turned off.** It cannot start inside a Vercel Sandbox, and Codex then refuses
+  every command. The Vercel Sandbox is the isolation.
+- **A run has a limit**, 240 seconds by default (`SANDBOX_RUN_LIMIT_SECONDS`): a hosted API cannot hold a request
+  for ever. A run that reaches it fails with a sentence saying so.
+
+Both API keys are required: a sandbox has no login. Outside Vercel a sandbox token is needed too, in
+`VERCEL_OIDC_TOKEN`; `vercel env pull` writes one that lasts 12 hours.
+
 ### Recorded runs, and the end-to-end test
 
 With `AGENT_RUNTIME=recorded` the API replays recordings of real runs (`fixtures/recordings.json`) in place of the
@@ -86,10 +114,11 @@ login, and it gives the same answer whatever the task. Everything above the port
 
 One browser test uses both runtimes:
 
-| Command              | Runs on                        | Guards                                         |
-| -------------------- | ------------------------------ | ---------------------------------------------- |
-| `pnpm test:e2e`      | the recordings                 | our own code: the use cases, the API, the page |
-| `pnpm test:e2e:live` | the real Claude Code and Codex | the agents: a change in what they send         |
+| Command                 | Runs on                            | Guards                                            |
+| ----------------------- | ---------------------------------- | ------------------------------------------------- |
+| `pnpm test:e2e`         | the recordings                     | our own code: the use cases, the API, the page    |
+| `pnpm test:e2e:live`    | the real Claude Code and Codex     | the agents: a change in what they send            |
+| `pnpm test:e2e:sandbox` | the same, each in a Vercel Sandbox | the hosted path, and the agents of Vercel's image |
 
 To see what a test does, one command: `pnpm test:e2e:film`. It plays the recorded tests at a speed a person can
 read and saves a video of each under its name in `e2e-videos/` (ignored by git). Add `E2E_RUNTIME=local` in front
@@ -115,16 +144,17 @@ pins, so that can only happen on an upgrade: then run the live test, and make th
 Read from the environment, and from a `.env` file at the root of the repository when there is one (see
 `.env.example`). The server checks it at startup and stops with the name of any variable that is wrong.
 
-| Variable            | Default                 | Meaning                                                                 |
-| ------------------- | ----------------------- | ----------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY` | not set                 | Secret. Without it, Claude Code uses the login on the machine.          |
-| `OPENAI_API_KEY`    | not set                 | Secret. Without it, Codex uses the login on the machine.                |
-| `CLAUDE_CODE_MODEL` | `haiku`                 | The model Claude Code runs on                                           |
-| `CODEX_MODEL`       | `gpt-6-luna`            | The model Codex runs on                                                 |
-| `TASK_CHECK_MODEL`  | `claude-haiku-5-5`      | The model that checks a task before a run and reviews it after          |
-| `AGENT_RUNTIME`     | `local`                 | `local`: the real agents. `recorded`: recordings of real runs, no key   |
-| `PORT`              | `3001`                  | The port of the API                                                     |
-| `API_URL`           | `http://localhost:3001` | Read by the web app: where it forwards `/rpc`. Not sent to the browser. |
+| Variable                    | Default                 | Meaning                                                                 |
+| --------------------------- | ----------------------- | ----------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`         | not set                 | Secret. Without it, Claude Code uses the login on the machine.          |
+| `OPENAI_API_KEY`            | not set                 | Secret. Without it, Codex uses the login on the machine.                |
+| `CLAUDE_CODE_MODEL`         | `haiku`                 | The model Claude Code runs on                                           |
+| `CODEX_MODEL`               | `gpt-6-luna`            | The model Codex runs on                                                 |
+| `TASK_CHECK_MODEL`          | `claude-haiku-5-5`      | The model that checks a task before a run and reviews it after          |
+| `AGENT_RUNTIME`             | `local`                 | `local`, `sandbox` (the default on Vercel) or `recorded`                |
+| `SANDBOX_RUN_LIMIT_SECONDS` | `240`                   | In a sandbox, the longest a run may take                                |
+| `PORT`                      | `3001`                  | The port of the API                                                     |
+| `API_URL`                   | `http://localhost:3001` | Read by the web app: where it forwards `/rpc`. Not sent to the browser. |
 
 A key is given to its own agent only. Each agent's process starts without the other provider's variables, and
 without any credential variable left in the server's environment: credentials reach an agent through this

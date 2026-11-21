@@ -1,0 +1,16 @@
+{
+  "name": "@comparator/runtime-sandbox",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Runs each agent in its own Vercel Sandbox, a throwaway machine, by sending it the agent's command.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@comparator/application": "workspace:*",
+    "@comparator/domain": "workspace:*",
+    "@vercel/sandbox": "^4.1.0",
+    "neverthrow": "^8.2.0"
+  }
+}

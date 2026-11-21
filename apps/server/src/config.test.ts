@@ -7,6 +7,7 @@ describe('readConfig', () => {
     expect(readConfig({})._unsafeUnwrap()).toEqual({
       port: 3001,
       runtime: 'local',
+      sandboxRunLimitMs: 240_000,
       recordedPaceMs: 60,
       claudeCode: { model: 'haiku', apiKey: undefined },
       codex: { model: 'gpt-6-luna', apiKey: undefined },
@@ -25,6 +26,7 @@ describe('readConfig', () => {
     expect(config).toEqual({
       port: 4000,
       runtime: 'local',
+      sandboxRunLimitMs: 240_000,
       recordedPaceMs: 60,
       claudeCode: { model: 'sonnet', apiKey: 'key-a' },
       codex: { model: 'other', apiKey: 'key-o' },
@@ -37,6 +39,21 @@ describe('readConfig', () => {
     expect(config.claudeCode.apiKey).toBeUndefined();
     expect(config.codex.model).toBe('gpt-6-luna');
     expect(config.port).toBe(3001);
+  });
+
+  it('runs the agents in a sandbox on Vercel, and on this machine elsewhere', () => {
+    const keys = { ANTHROPIC_API_KEY: 'key-a', OPENAI_API_KEY: 'key-o' };
+    expect(readConfig(keys)._unsafeUnwrap().runtime).toBe('local');
+    expect(readConfig({ ...keys, VERCEL: '1' })._unsafeUnwrap().runtime).toBe('sandbox');
+    expect(readConfig({ ...keys, VERCEL: '1', AGENT_RUNTIME: 'recorded' })._unsafeUnwrap().runtime).toBe(
+      'recorded',
+    );
+  });
+
+  it('refuses the sandbox without both keys, naming the missing one: a sandbox has no login', () => {
+    const error = readConfig({ AGENT_RUNTIME: 'sandbox', ANTHROPIC_API_KEY: 'key-a' })._unsafeUnwrapErr();
+    expect(error).toContain('OPENAI_API_KEY');
+    expect(error).not.toContain('ANTHROPIC_API_KEY');
   });
 
   it('names the variable that is wrong', () => {
