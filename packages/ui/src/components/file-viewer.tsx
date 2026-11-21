@@ -1,7 +1,7 @@
 'use client';
 
 import { Editor, type BeforeMount } from '@monaco-editor/react';
-import { useId, useSyncExternalStore } from 'react';
+import { useEffect, useId, useState, useSyncExternalStore } from 'react';
 
 import type { WorkspaceFile } from '@comparator/contracts';
 
@@ -80,22 +80,40 @@ function watchTheme(onChange: () => void) {
 const isDark = () => document.documentElement.classList.contains('dark');
 
 const NOTE = 'flex h-full items-center justify-center p-4 text-sm text-muted-foreground';
+const LOADING = <p className={NOTE}>Loading the editor…</p>;
+
+/** The editor's own code, loaded once from the app's bundle, when the first file is opened. */
+let editorCode: Promise<unknown> | undefined;
+function useEditorCode(): boolean {
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    let current = true;
+    editorCode ??= import('../editor/setup.ts');
+    void editorCode.then(() => current && setLoaded(true));
+    return () => {
+      current = false;
+    };
+  }, []);
+  return loaded;
+}
 
 /**
- * One file, read-only, in a code editor that fills the space it is given. The editor itself is fetched when the
- * first file is opened, not with the page.
+ * One file, read-only, in a code editor that fills the space it is given. The editor's code is part of the app,
+ * and is loaded when the first file is opened, not with the page.
  */
 export function FileViewer({ file }: { file: WorkspaceFile }) {
   const dark = useSyncExternalStore(watchTheme, isDark, () => false);
   // Editors keep their text by path: this viewer's own prefix keeps two agents' `index.js` apart.
   const id = useId().replaceAll(':', '');
+  const editorLoaded = useEditorCode();
 
   if (file.state === 'binary')
     return <p className={NOTE}>This is a binary file: its content is not shown.</p>;
+  if (!editorLoaded) return LOADING;
   return (
     <Editor
       beforeMount={defineThemes}
-      loading={<p className={NOTE}>Loading the editor…</p>}
+      loading={LOADING}
       options={{
         readOnly: true,
         domReadOnly: true,
