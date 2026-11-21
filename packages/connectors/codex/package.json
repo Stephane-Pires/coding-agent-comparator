@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Drives Codex through its SDK and translates its events into run events.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./command-line": "./src/command-line.ts"
   },
   "dependencies": {
     "@comparator/application": "workspace:*",

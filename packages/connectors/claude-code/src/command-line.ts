@@ -2,7 +2,7 @@ import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 
 import type { AgentEvent } from '@comparator/domain';
 
-import { ALLOWED_TOOLS } from './agent.ts';
+import { ALLOWED_TOOLS } from './tools.ts';
 import { createTranslator } from './translate.ts';
 
 /** A printed line is a message of the SDK when it is an object that says its type: the output format promises it. */

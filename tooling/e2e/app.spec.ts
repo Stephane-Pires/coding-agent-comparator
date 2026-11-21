@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { PASSWORD } from '../../playwright.e2e.config.ts';
+
 // The same tests run on recorded runs and on the real agents (see playwright.e2e.config.ts). So they look at what
 // holds for any run, not at an agent's exact words: a status, a file, a row of numbers.
 const live = (process.env['E2E_RUNTIME'] ?? 'recorded') !== 'recorded';
@@ -20,12 +22,23 @@ test.afterEach(async ({ page }, testInfo) => {
   await page.video()?.saveAs(`e2e-videos/${name}.webm`);
 });
 
+const TASK_FIELD = 'Task for the agents';
+
 /** The column of one agent's run. */
 const column = (page: Page, agent: string) => page.locator(`section[aria-label="${agent}"]`).first();
 
-async function send(page: Page, task: string) {
+/** Gives the password, as a person would on a first visit. */
+async function enter(page: Page) {
   await page.goto('/');
-  await page.getByRole('textbox').fill(task);
+  await page.getByLabel('Password').fill(PASSWORD);
+  await page.getByRole('button', { name: 'Enter' }).click();
+  // By its name: the password field is a text box too.
+  await expect(page.getByRole('textbox', { name: TASK_FIELD })).toBeVisible();
+}
+
+async function send(page: Page, task: string) {
+  await enter(page);
+  await page.getByRole('textbox', { name: TASK_FIELD }).fill(task);
   await page.getByRole('button', { name: 'Send' }).click();
 }
 
@@ -77,4 +90,32 @@ test('an agent that stops without doing the task ends as incomplete, with what i
   // Nothing to celebrate and nobody is fastest.
   await expect(page.getByRole('table')).not.toContainText('Fastest');
   await expect(page.locator('.snowflake')).toHaveCount(0);
+});
+
+test('the password: no call works without it, a wrong one says so, and the right one opens the app', async ({
+  page,
+  request,
+}, testInfo) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Your pass, please.' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: TASK_FIELD })).toHaveCount(0);
+  // Through the app or straight to the API's own address: a call that would spend the keys is refused.
+  const api = String(testInfo.config.metadata['api']);
+  const task = { task: 'Write a script.' };
+  expect((await request.post('/rpc/tasks/check', { data: { json: task } })).status()).toBe(401);
+  expect((await request.post(`${api}/api/tasks/check`, { data: task })).status()).toBe(401);
+  // A program gives the password with its call.
+  const withPassword = { data: task, headers: { authorization: `Bearer ${PASSWORD}` } };
+  expect((await request.post(`${api}/api/tasks/check`, withPassword)).status()).toBe(200);
+
+  await page.getByLabel('Password').fill('not the password');
+  await page.getByRole('button', { name: 'Enter' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'That is not the password' })).toBeVisible();
+
+  await page.getByLabel('Password').fill(PASSWORD);
+  await page.getByRole('button', { name: 'Enter' }).click();
+  await expect(page.getByRole('textbox', { name: TASK_FIELD })).toBeVisible();
+  // The pass is kept: the page loaded again goes straight to the app.
+  await page.reload();
+  await expect(page.getByRole('textbox', { name: TASK_FIELD })).toBeVisible();
 });

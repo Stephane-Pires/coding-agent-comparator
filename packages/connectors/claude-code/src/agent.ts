@@ -3,6 +3,7 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 import type { CodingAgent } from '@comparator/application';
 
 import { environment } from './environment.ts';
+import { ALLOWED_TOOLS } from './tools.ts';
 import { createTranslator } from './translate.ts';
 
 interface ClaudeCodeOptions {
@@ -10,9 +11,6 @@ interface ClaudeCodeOptions {
   /** Without a key, Claude Code uses the login already on the machine. */
   readonly apiKey: string | undefined;
 }
-
-/** Tools approved in advance, so a run never waits for a person to answer a permission prompt. */
-export const ALLOWED_TOOLS = ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Bash', 'WebSearch', 'WebFetch'];
 
 export function claudeCodeAgent({ model, apiKey }: ClaudeCodeOptions): CodingAgent {
   return {

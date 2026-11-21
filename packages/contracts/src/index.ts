@@ -77,7 +77,51 @@ export const TaskCheckInput = z.object({
 });
 export type TaskCheckInput = z.infer<typeof TaskCheckInput>;
 
+/** A call that needs the password and did not carry it. */
+const NO_ACCESS = {
+  UNAUTHORIZED: { status: 401, message: 'This API is private: give its password first.' },
+};
+
+export const PASSWORD_MAX_LENGTH = 200;
+export const PasswordInput = z.object({
+  password: z.string().max(PASSWORD_MAX_LENGTH).describe('The password of the app.'),
+});
+export type PasswordInput = z.infer<typeof PasswordInput>;
+
+export const Access = z.object({
+  allowed: z.boolean().describe('Whether this caller may check tasks and start runs.'),
+});
+export type Access = z.infer<typeof Access>;
+
 export const contract = {
+  access: {
+    get: oc
+      .route({
+        method: 'GET',
+        path: '/access',
+        tags: ['Access'],
+        summary: 'Say whether this caller may use the API',
+        description:
+          'A hosted app is private: checking a task and starting a run need its password. This says whether ' +
+          'the caller already has access, so a client knows whether to ask for the password. ' +
+          'Where no password is set, such as on a dev machine, everyone is allowed.',
+      })
+      .output(Access),
+    enter: oc
+      .route({
+        method: 'POST',
+        path: '/access',
+        tags: ['Access'],
+        summary: 'Give the password',
+        description:
+          'With the right password, the answer sets a cookie that gives access for a week; a browser sends ' +
+          'it back by itself. With a wrong one, `allowed` is false and nothing is set. ' +
+          'A program can skip this and send the password with each call, as `Authorization: Bearer <password>`.',
+      })
+      .errors(INVALID_INPUT)
+      .input(PasswordInput)
+      .output(Access),
+  },
   tasks: {
     check: oc
       .route({
@@ -92,7 +136,7 @@ export const contract = {
           'refusal for a comparison, before any run is started. If the check itself cannot be made, the task is ' +
           'accepted.',
       })
-      .errors(INVALID_INPUT)
+      .errors({ ...INVALID_INPUT, ...NO_ACCESS })
       .input(TaskCheckInput)
       .output(TaskVerdict),
   },
@@ -109,7 +153,7 @@ export const contract = {
           'A task that is not a coding task is not run: the stream ends at once with a failed outcome. ' +
           'To cancel a run, close the connection.',
       })
-      .errors(INVALID_INPUT)
+      .errors({ ...INVALID_INPUT, ...NO_ACCESS })
       .input(RunInput)
       .output(eventIterator(RunChunk)),
   },

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { startRun, type CheckTask, type ReviewRun } from '@comparator/application';
 import { inMemoryWorkspaces, scriptedAgent, tickingClock, type Step } from '@comparator/application/testing';
 
-import { createApp } from './app.ts';
+import { createApp } from './api.ts';
 
 const accepts: CheckTask = () => Promise.resolve({ verdict: 'accepted' });
 const done: ReviewRun = () => Promise.resolve({ status: 'succeeded' });
@@ -15,22 +15,26 @@ function setup(
   workspaces = inMemoryWorkspaces(),
   checkTask = accepts,
   reviewRun = done,
+  password?: string,
 ) {
   const claude = scriptedAgent(claudeSteps);
   const codex = scriptedAgent([
     { kind: 'message', text: 'from codex' },
     { kind: 'finished', outcome: { status: 'succeeded' } },
   ]);
-  const app = createApp({
-    checkTask,
-    startRun: startRun({
-      agents: { 'claude-code': claude, codex },
-      workspaces,
-      clock: tickingClock(500),
+  const app = createApp(
+    {
       checkTask,
-      reviewRun,
-    }),
-  });
+      startRun: startRun({
+        agents: { 'claude-code': claude, codex },
+        workspaces,
+        clock: tickingClock(500),
+        checkTask,
+        reviewRun,
+      }),
+    },
+    { password, https: true },
+  );
   const post = (path: string, body: unknown, signal?: AbortSignal) =>
     app.request(path, {
       method: 'POST',
@@ -226,5 +230,72 @@ describe('the API reference', () => {
     const response = await app.request('/docs');
     expect(response.status).toBe(200);
     expect(await response.text()).toContain('/openapi.json');
+  });
+});
+
+describe('a private API', () => {
+  const PASSWORD = 'open sesame';
+  const { app } = setup([], inMemoryWorkspaces(), accepts, done, PASSWORD);
+  const call = (method: string, path: string, headers: Record<string, string> = {}, body?: unknown) =>
+    app.request(path, {
+      method,
+      headers: { 'content-type': 'application/json', ...headers },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+  const check = (headers: Record<string, string>) =>
+    call('POST', '/api/tasks/check', headers, { task: 'write a script' });
+
+  it('refuses to check a task or start a run without the password, on both routes', async () => {
+    expect((await check({})).status).toBe(401);
+    expect((await check({ authorization: 'Bearer not the password' })).status).toBe(401);
+    expect((await check({ cookie: 'comparator-pass=made-up' })).status).toBe(401);
+    const run = await call('POST', '/api/runs', {}, { agent: 'codex', task: 'write a script' });
+    expect(run.status).toBe(401);
+    const rpc = await call('POST', '/rpc/tasks/check', {}, { json: { task: 'write a script' } });
+    expect(rpc.status).toBe(401);
+  });
+
+  it('says to anyone whether they are allowed', async () => {
+    expect(await (await call('GET', '/api/access')).json()).toEqual({ allowed: false });
+  });
+
+  it('a wrong password gives nothing', async () => {
+    const wrong = await call('POST', '/api/access', {}, { password: 'open sesame ' });
+    expect(await wrong.json()).toEqual({ allowed: false });
+    expect(wrong.headers.get('set-cookie')).toBeNull();
+  });
+
+  it('the right password gives a pass, which then opens the API', async () => {
+    const entered = await call('POST', '/api/access', {}, { password: PASSWORD });
+    expect(await entered.json()).toEqual({ allowed: true });
+    const cookie = entered.headers.get('set-cookie') ?? '';
+    // No script can read it, another site cannot use it, it is never sent in clear, and it does not hold the password.
+    expect(cookie).toMatch(/HttpOnly/);
+    expect(cookie).toMatch(/SameSite=Lax/);
+    expect(cookie).toMatch(/Secure/);
+    expect(cookie).not.toContain(PASSWORD);
+    const pass = cookie.split(';')[0] ?? '';
+    expect(await (await call('GET', '/api/access', { cookie: pass })).json()).toEqual({ allowed: true });
+    expect((await check({ cookie: pass })).status).toBe(200);
+  });
+
+  it('a program may send the password with each call instead', async () => {
+    expect((await check({ authorization: `Bearer ${PASSWORD}` })).status).toBe(200);
+  });
+
+  it('leaves the reference open, and gives it a field for the password', async () => {
+    expect((await call('GET', '/docs')).status).toBe(200);
+    const document = (await (await call('GET', '/openapi.json')).json()) as { security?: unknown };
+    expect(document.security).toEqual([{ password: [] }]);
+  });
+});
+
+describe('an API with no password, as on a dev machine', () => {
+  it('allows everyone, and sets no cookie', async () => {
+    const { app, post } = setup([]);
+    expect(await (await app.request('/api/access')).json()).toEqual({ allowed: true });
+    const entered = await post('/api/access', { password: 'anything' });
+    expect(await entered.json()).toEqual({ allowed: true });
+    expect(entered.headers.get('set-cookie')).toBeNull();
   });
 });

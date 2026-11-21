@@ -1,7 +1,7 @@
 # Infrastructure
 
-What runs, where, and what it needs. This page covers the dev environment. The production environment (Vercel) is
-added with the deployment slice.
+What runs, where, and what it needs: first on a dev machine, then [hosted on Vercel](#production-environment). The
+code is the same in both; only settings differ.
 
 ## Dev environment
 
@@ -50,8 +50,8 @@ flowchart LR
 | Workspace     | A folder `comparator-*` under the OS temp directory, outside the repo              | One run; deleted when it ends |
 | State         | None on the server. The page keeps the comparisons in memory until it is reloaded. |                               |
 
-The browser only talks to the web app's origin. The web app forwards `/rpc` to the API, so the API's address is a
-server-side setting and no cross-origin rule is needed. A comparison is one stream per agent, opened by the page with
+The browser only talks to the web app's origin. The web app forwards `/rpc` to the API (a rewrite in `next.config.ts`), so
+the API's address is a server-side setting and no cross-origin rule is needed. A comparison is one stream per agent, opened by the page with
 the same task; closing a stream (the Stop button) cancels that run.
 
 ### The task check
@@ -134,6 +134,8 @@ pins, so that can only happen on an upgrade: then run the live test, and make th
 | Route                   | What it serves                                                    |
 | ----------------------- | ----------------------------------------------------------------- |
 | `POST /api/tasks/check` | Says whether a task is a coding task whose result is files        |
+| `GET /api/access`       | Says whether the caller may use the API                           |
+| `POST /api/access`      | Takes the password; a right one sets the cookie that gives access |
 | `POST /api/runs`        | Runs one agent on a task; the answer is a stream of events (REST) |
 | `POST /rpc/runs/start`  | The same procedure for the typed oRPC client                      |
 | `GET /openapi.json`     | The OpenAPI document, generated from the contract                 |
@@ -144,17 +146,18 @@ pins, so that can only happen on an upgrade: then run the live test, and make th
 Read from the environment, and from a `.env` file at the root of the repository when there is one (see
 `.env.example`). The server checks it at startup and stops with the name of any variable that is wrong.
 
-| Variable                    | Default                 | Meaning                                                                 |
-| --------------------------- | ----------------------- | ----------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY`         | not set                 | Secret. Without it, Claude Code uses the login on the machine.          |
-| `OPENAI_API_KEY`            | not set                 | Secret. Without it, Codex uses the login on the machine.                |
-| `CLAUDE_CODE_MODEL`         | `haiku`                 | The model Claude Code runs on                                           |
-| `CODEX_MODEL`               | `gpt-6-luna`            | The model Codex runs on                                                 |
-| `TASK_CHECK_MODEL`          | `claude-haiku-5-5`      | The model that checks a task before a run and reviews it after          |
-| `AGENT_RUNTIME`             | `local`                 | `local`, `sandbox` (the default on Vercel) or `recorded`                |
-| `SANDBOX_RUN_LIMIT_SECONDS` | `240`                   | In a sandbox, the longest a run may take                                |
-| `PORT`                      | `3001`                  | The port of the API                                                     |
-| `API_URL`                   | `http://localhost:3001` | Read by the web app: where it forwards `/rpc`. Not sent to the browser. |
+| Variable                    | Default                 | Meaning                                                                                              |
+| --------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`         | not set                 | Secret. Without it, Claude Code uses the login on the machine.                                       |
+| `OPENAI_API_KEY`            | not set                 | Secret. Without it, Codex uses the login on the machine.                                             |
+| `CLAUDE_CODE_MODEL`         | `haiku`                 | The model Claude Code runs on                                                                        |
+| `CODEX_MODEL`               | `gpt-6-luna`            | The model Codex runs on                                                                              |
+| `TASK_CHECK_MODEL`          | `claude-haiku-5-5`      | The model that checks a task before a run and reviews it after                                       |
+| `AGENT_RUNTIME`             | `local`                 | `local`, `sandbox` (the default on Vercel) or `recorded`                                             |
+| `SANDBOX_RUN_LIMIT_SECONDS` | `240`                   | In a sandbox, the longest a run may take                                                             |
+| `PORT`                      | `3001`                  | The port of the API                                                                                  |
+| `API_URL`                   | `http://localhost:3001` | Read by the web app: where it forwards `/rpc`. Not sent to the browser.                              |
+| `DEMO_PASSWORD`             | not set                 | Secret, 8 characters or more. The one password of the app, checked by the API. Required when hosted. |
 
 A key is given to its own agent only. Each agent's process starts without the other provider's variables, and
 without any credential variable left in the server's environment: credentials reach an agent through this
@@ -171,3 +174,103 @@ An agent runs unattended, so it is never asked for approval.
 
 On a dev machine the agents are processes of your user. The workspace is where they start, and Codex is confined to
 it by its sandbox; Claude Code's shell tool is not. Run tasks you would run yourself.
+
+## Production environment
+
+Two Vercel projects, built from this one repository. A push to `main` deploys both.
+
+```mermaid
+flowchart TB
+  visitor["A visitor's browser"]
+  program["A program: curl, the reference at /docs"]
+  subgraph webp["Vercel project 1: the web app (Root Directory apps/web)"]
+    page["The page: asks the API whether it is allowed, shows the password form or the app"]
+    forward["Forwards /rpc to the API, cookie included"]
+  end
+  subgraph apip["Vercel project 2: the API (Root Directory apps/server)"]
+    http["Hono, one Vercel Function: src/index.ts"]
+    access["access: checks the password, gives the pass"]
+    locked["tasks and runs: only with the pass or the password"]
+    http --> access
+    http --> locked
+  end
+  subgraph sandboxes["Vercel Sandbox: one machine per run, destroyed after it"]
+    claude["Claude Code"]
+    codex["Codex"]
+  end
+  anthropic["Anthropic API"]
+  openai["OpenAI API"]
+  visitor --> page
+  visitor -- "its calls, with the pass cookie" --> forward
+  forward --> http
+  program -- "Authorization: Bearer the password" --> http
+  locked -- "sends the agent's command, reads its events" --> claude
+  locked -- "sends the agent's command, reads its events" --> codex
+  locked -- "the task check and the run review" --> anthropic
+  claude --> anthropic
+  codex --> openai
+```
+
+### The password
+
+One password, `DEMO_PASSWORD`, checked in one place: the API (`apps/server/src/access.ts`). The API is what spends the
+API keys, and it has a public address of its own, so the lock is there and nowhere else. The web app holds no secret.
+
+| Step             | What happens                                                                                |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| The page loads   | It asks `access.get`. Until the answer comes it shows its header only, never the app.       |
+| Not allowed      | It shows the password form.                                                                 |
+| The form is sent | `access.enter` checks the password. A right one sets a cookie, the pass.                    |
+| Every later call | The browser sends the pass by itself; `tasks.check` and `runs.start` answer 401 without it. |
+
+- The pass is a cookie no script of the page can read (`HttpOnly`), that another site cannot make the browser send
+  (`SameSite=Lax`), sent over HTTPS only, and kept for a week. It holds a digest, not the password; changing
+  `DEMO_PASSWORD` ends every pass.
+- The cookie belongs to the web app's address: the browser only ever talks to that address, and the forwarding
+  carries the cookie to the API and its answer back.
+- A program sends the password with each call, as `Authorization: Bearer <password>`. The reference at `/docs` has a
+  field for it. `/docs` and `/openapi.json` are open: they spend nothing.
+- **A hosted API without `DEMO_PASSWORD` does not start.** Nothing is left open by forgetting the setting.
+- On a dev machine no password is set and everyone is allowed. The end-to-end tests set one, so they run the app as
+  it is hosted.
+- Known limits: the page itself and its scripts are served to anyone; they hold no data, and no call works without
+  the password. Nothing slows down someone who tries passwords one after another, so choose a long one.
+
+### What differs from a dev machine
+
+|                      | Dev machine                                       | Vercel                                            |
+| -------------------- | ------------------------------------------------- | ------------------------------------------------- |
+| Entry of the API     | `src/main.ts`: serves on a port                   | `src/index.ts`: hands the same Hono app to Vercel |
+| Where the agents run | Processes on the machine (`AGENT_RUNTIME=local`)  | Sandboxes, the default there and the only choice  |
+| The two questions    | The Anthropic API with a key, Claude Code without | The Anthropic API                                 |
+| Credentials          | Keys or logins                                    | Keys only                                         |
+| Password             | None                                              | Required                                          |
+| Longest run          | No limit                                          | 240 seconds, under the 300 a function may last    |
+
+The hosted entry must never load an agent's SDK: a function holds 250 MB at most, and the agents weigh 700 MB.
+`tooling/hosted-entry.test.ts` follows every import from `src/index.ts` and fails if one leads to an SDK.
+
+### Setting it up
+
+Done once, in Vercel's dashboard.
+
+1. Create two projects from the GitHub repository:
+
+   | Project                       | Root Directory | Framework |
+   | ----------------------------- | -------------- | --------- |
+   | `coding-agent-comparator-api` | `apps/server`  | Hono      |
+   | `coding-agent-comparator`     | `apps/web`     | Next.js   |
+
+2. Set the environment variables, for Production:
+
+   | Project | Variable            | Value                                                                           |
+   | ------- | ------------------- | ------------------------------------------------------------------------------- |
+   | API     | `ANTHROPIC_API_KEY` | The Anthropic key                                                               |
+   | API     | `OPENAI_API_KEY`    | The OpenAI key                                                                  |
+   | API     | `DEMO_PASSWORD`     | The password you give to visitors, 8 characters or more                         |
+   | Web     | `API_URL`           | The address of the API project, `https://…vercel.app`, with no slash at the end |
+
+   The sandbox token is not in this list: Vercel gives it to the API by itself. `API_URL` is read when the web app
+   is built: after changing it, deploy the web project again.
+
+3. Deploy the API first, then the web app. From then on, a push to `main` deploys both.

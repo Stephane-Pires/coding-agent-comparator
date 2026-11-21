@@ -13,6 +13,7 @@ const Environment = z.object({
   CODEX_MODEL: optional(z.string()).default('gpt-6-luna'),
   TASK_CHECK_MODEL: optional(z.string()).default('claude-haiku-5-5'),
   AGENT_RUNTIME: optional(z.enum(['local', 'recorded', 'sandbox'])),
+  DEMO_PASSWORD: optional(z.string().min(8).max(200)),
   /** Set by Vercel on everything it runs. */
   VERCEL: optional(z.string()),
   SANDBOX_RUN_LIMIT_SECONDS: optional(z.coerce.number().int().min(10)).default(240),
@@ -22,6 +23,10 @@ const Environment = z.object({
 
 export interface Config {
   readonly port: number;
+  /** The one password of the app. Not set: the API is open, which is for a dev machine only. */
+  readonly password: string | undefined;
+  /** On Vercel: the address is public, and served over HTTPS. */
+  readonly hosted: boolean;
   /**
    * What runs a task. `local`: the real agents, on this machine. `sandbox`: the real agents, each in a Vercel
    * Sandbox. `recorded`: recordings of real runs, with no key and no login.
@@ -56,8 +61,15 @@ export function readConfig(env: Readonly<Record<string, string | undefined>>): R
     return err(
       `Invalid configuration. The agents run in a sandbox, which has no login: set ${missing.join(' and ')} in .env or the environment.`,
     );
+  // A hosted API has a public address: without a password, anyone who finds it spends the keys.
+  if (data.VERCEL !== undefined && data.DEMO_PASSWORD === undefined)
+    return err(
+      'Invalid configuration. A hosted API must be private: set DEMO_PASSWORD, 8 characters or more, in the environment.',
+    );
   return ok({
     port: data.PORT,
+    password: data.DEMO_PASSWORD,
+    hosted: data.VERCEL !== undefined,
     runtime,
     sandboxRunLimitMs: data.SANDBOX_RUN_LIMIT_SECONDS * 1000,
     recordedPaceMs: data.RECORDED_PACE_MS,

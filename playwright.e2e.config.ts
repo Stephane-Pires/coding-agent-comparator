@@ -21,6 +21,8 @@ const filmed = process.env['E2E_FILM'] === '1';
 // both can run at once; set these two variables if something else already holds them.
 const API_PORT = process.env['E2E_API_PORT'] ?? '3011';
 const WEB_PORT = process.env['E2E_WEB_PORT'] ?? '3110';
+// The tests run the app as it is hosted: behind its password.
+export const PASSWORD = 'a password for the tests';
 const API = `http://127.0.0.1:${API_PORT}`;
 const WEB = `http://127.0.0.1:${WEB_PORT}`;
 
@@ -33,6 +35,7 @@ export default defineConfig({
   // One comparison at a time: the live agents share a machine and an account.
   workers: 1,
   reporter: [['list']],
+  metadata: { api: API },
   use: {
     baseURL: WEB,
     trace: 'retain-on-failure',
@@ -47,6 +50,7 @@ export default defineConfig({
       env: {
         PORT: API_PORT,
         AGENT_RUNTIME: runtime,
+        DEMO_PASSWORD: PASSWORD,
         // How far apart a recorded agent's steps are: quick for a check, slow enough to read for a person.
         RECORDED_PACE_MS: filmed ? '700' : '60',
       },
@@ -54,8 +58,8 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
-      // Where the API is belongs to the build: the web app forwards its calls there.
       command: `pnpm --filter @comparator/web build && pnpm --filter @comparator/web exec next start --port ${WEB_PORT}`,
+      // Where the API is belongs to the build: the web app forwards its calls there.
       env: { API_URL: API },
       url: WEB,
       timeout: 180_000,

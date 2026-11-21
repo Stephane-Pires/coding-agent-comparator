@@ -1,5 +1,10 @@
+import { AccessGate } from '../access/access-gate.tsx';
 import { ChatPage } from '../chat/chat-page.tsx';
 
 export default function Page() {
-  return <ChatPage />;
+  return (
+    <AccessGate>
+      <ChatPage />
+    </AccessGate>
+  );
 }

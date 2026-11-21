@@ -8,7 +8,8 @@ import { AgentId, Task, type RunEvent } from '@comparator/domain';
 import type { Recording } from '@comparator/runtime-recorded';
 
 import { readConfig } from './config.ts';
-import { createContainer, RECORDINGS_FILE } from './container.ts';
+import { createContainer } from './container.ts';
+import { machineRuntime, RECORDINGS_FILE } from './runtimes/local.ts';
 
 /** One task per thing the end-to-end test looks at. The first is what any other task is answered with. */
 const TASKS = [
@@ -24,7 +25,7 @@ const envFile = join(import.meta.dirname, '../../../.env');
 if (existsSync(envFile)) process.loadEnvFile(envFile);
 const config = readConfig(process.env);
 if (config.isErr()) throw new Error(config.error);
-const { checkTask, startRun } = createContainer({ ...config.value, runtime: 'local' });
+const { checkTask, startRun } = createContainer(machineRuntime({ ...config.value, runtime: 'local' }));
 const signal = new AbortController().signal;
 
 const recordings: Recording[] = [];

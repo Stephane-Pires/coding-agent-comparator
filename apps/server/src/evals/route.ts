@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { RunReviewer, TaskClassifier } from '@comparator/application';
 
 import { readConfig } from '../config.ts';
-import { questions } from '../container.ts';
+import { questions } from '../runtimes/local.ts';
 
 /**
  * What an evaluation measures: the two questions as the server would ask them, on the route named on the command

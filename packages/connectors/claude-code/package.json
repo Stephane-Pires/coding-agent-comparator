@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Drives Claude Code through its SDK and translates its events into run events.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./command-line": "./src/command-line.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.328",
