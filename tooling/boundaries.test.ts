@@ -20,7 +20,7 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
-export function importsOf(code: string): string[] {
+function importsOf(code: string): string[] {
   return [...code.matchAll(IMPORT_RE)].map((m) => m[1] ?? m[2] ?? '').filter(Boolean);
 }
 
@@ -28,7 +28,7 @@ const matches = (spec: string, prefixes: readonly string[]) =>
   prefixes.some((p) => spec === p || spec.startsWith(p.endsWith('/') || p.endsWith(':') ? p : `${p}/`));
 
 /** Returns a reason string when `spec` is not allowed from a package with `rule`, otherwise null. */
-export function violation(spec: string, rule: PackageRule): string | null {
+function violation(spec: string, rule: PackageRule): string | null {
   if (spec.startsWith('.')) return null;
   if (spec.startsWith(SCOPE)) {
     const target = spec.split('/').slice(0, 2).join('/');

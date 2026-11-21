@@ -29,8 +29,8 @@ export function questions(config: Config): Pick<Runtime, 'classifier' | 'reviewe
   const { model, apiKey } = config.taskCheck;
   return apiKey === undefined
     ? {
-        classifier: claudeCodeTaskClassifier({ model, apiKey }),
-        reviewer: claudeCodeRunReviewer({ model, apiKey }),
+        classifier: claudeCodeTaskClassifier({ model }),
+        reviewer: claudeCodeRunReviewer({ model }),
       }
     : anthropicQuestions({ model, apiKey });
 }

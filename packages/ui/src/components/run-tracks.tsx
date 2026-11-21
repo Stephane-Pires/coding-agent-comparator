@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type CSSProperties, type UIEvent, type Whe
 
 import type { AgentId, RunStatus, Tool, ToolCall } from '@comparator/contracts';
 import { AGENT_LABELS } from '@comparator/ui/agents';
+import { fastestOf, seconds } from '@comparator/ui/components/comparison-metrics';
+import { RUN_STATUSES } from '@comparator/ui/components/run-status-badge';
 import { STATUSES, titleOf } from '@comparator/ui/components/tool-call-row';
 import {
   Tooltip,
@@ -24,8 +26,7 @@ export interface TrackGate {
 /** One agent's run as a track: what happened, and when. */
 export interface RunTrack {
   readonly agent: AgentId;
-  /** `undefined`: the run has not started, the task is still being checked. */
-  readonly status: RunStatus | undefined;
+  readonly status: RunStatus;
   readonly gates: readonly TrackGate[];
   /** Milliseconds after the comparison started at which the run ended. */
   readonly endedAt?: number | undefined;
@@ -37,7 +38,7 @@ export interface RunTrack {
  * The scale of the tracks, which never changes: one second is this many pixels, the width of one turn of the
  * track (`styles.css`, `.run-course`). So a run is never redrawn at another size: its track only gets longer.
  */
-export const PX_PER_SECOND = 28;
+const PX_PER_SECOND = 28;
 /** The course drawn ahead of the furthest run, so a track is never seen touching the edge. */
 const AHEAD_MS = 2000;
 const TICK_EVERY_S = 5;
@@ -52,38 +53,14 @@ export function courseLength(now: number, endedAt: readonly (number | undefined)
   return furthest + (running ? AHEAD_MS : 0);
 }
 
-/**
- * The agent that was fastest, when at least two runs did their task: the same rule as the table of numbers
- * (`comparison-metrics.tsx`).
- */
-function fastestOf(tracks: readonly RunTrack[]): AgentId | undefined {
-  const done = tracks.flatMap(({ agent, status, durationMs }) =>
-    status === 'succeeded' && durationMs !== undefined ? [{ agent, durationMs }] : [],
-  );
-  if (done.length < 2) return undefined;
-  return done.reduce((best, run) => (run.durationMs < best.durationMs ? run : best)).agent;
-}
-
-const seconds = new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
-/** A run in words, for who cannot see its track. */
+/** A run in words, for who cannot see its track: in the words of its badge. */
 function inWords({ agent, status, gates, durationMs }: RunTrack): string {
   const calls = plural(gates.length, 'tool call');
+  if (status === 'running') return `${AGENT_LABELS[agent]}: running, ${calls} so far.`;
   const time = durationMs === undefined ? '' : ` in ${seconds.format(durationMs / 1000)} seconds`;
-  const how =
-    status === undefined
-      ? 'at the start'
-      : status === 'running'
-        ? `running, ${calls} so far`
-        : status === 'succeeded'
-          ? `finished${time}, ${calls}`
-          : status === 'incomplete'
-            ? `stopped without doing the task${time}, ${calls}`
-            : status === 'failed'
-              ? `did not finish, ${calls}`
-              : `stopped, ${calls}`;
-  return `${AGENT_LABELS[agent]}: ${how}.`;
+  return `${AGENT_LABELS[agent]}: ${RUN_STATUSES[status].label.toLowerCase()}${time}, ${calls}.`;
 }
 
 const px = (time: number) => (time / 1000) * PX_PER_SECOND;
@@ -140,11 +117,10 @@ function Track({ track, now }: { track: RunTrack; now: number }) {
   const at = (time: number, centred = true) => ({
     translate: `calc(${px(time)}px${centred ? ' - 50%' : ''}) -50%`,
   });
-  // Where the track ends: at the start before the run, at its end after. While it lasts, at the clock, or at its
+  // Where the track ends: at its end once the run is over. While it lasts, at the clock, or at its
   // last gate if that one came since the clock last ticked: a gate is never ahead of its track.
-  const head = status === undefined ? 0 : (endedAt ?? Math.max(now, ...gates.map((gate) => gate.at)));
-  const EndIcon =
-    status === 'succeeded' ? ICONS.finish : status && status !== 'running' ? ICONS.run[status] : null;
+  const head = endedAt ?? Math.max(now, ...gates.map((gate) => gate.at));
+  const EndIcon = status === 'succeeded' ? ICONS.finish : status !== 'running' ? ICONS.run[status] : null;
   return (
     <div className={`${ROW} relative`}>
       {/* the course ahead, then the part of it already skied */}
@@ -182,7 +158,7 @@ export function RunTracks({ tracks, now }: { tracks: readonly RunTrack[]; now: n
   const fastest = fastestOf(tracks);
   const length = courseLength(
     now,
-    tracks.map(({ status, endedAt }) => (status === undefined ? 0 : endedAt)),
+    tracks.map(({ endedAt }) => endedAt),
   );
   const ticks = Array.from(
     { length: Math.floor(length / 1000 / TICK_EVERY_S) + 1 },
@@ -261,7 +237,7 @@ export function RunTracks({ tracks, now }: { tracks: readonly RunTrack[]; now: n
             {tracks.map((track) => (
               <Track key={track.agent} track={track} now={now} />
             ))}
-            {/* the scale: a mark every five seconds, where it always was */}
+            {/* the scale: a mark every five seconds */}
             <p className="relative h-4 text-xs text-muted-foreground tabular-nums">
               {ticks.map((tick) => (
                 <span key={tick} className="absolute left-0" style={{ translate: `${px(tick * 1000)}px` }}>
@@ -275,7 +251,7 @@ export function RunTracks({ tracks, now }: { tracks: readonly RunTrack[]; now: n
         <ul aria-hidden="true" className="flex w-28 shrink-0 flex-col gap-2 text-right tabular-nums">
           {tracks.map(({ agent, status, durationMs }) => (
             <li key={agent} className={`${ROW} justify-end`}>
-              {status === undefined || status === 'running' || durationMs === undefined ? null : (
+              {status === 'running' || durationMs === undefined ? null : (
                 <span className="run-arrival">
                   {seconds.format(durationMs / 1000)} s
                   {fastest === agent ? <span className="ml-2 font-medium text-brand">Fastest</span> : null}

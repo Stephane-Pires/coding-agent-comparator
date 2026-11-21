@@ -11,7 +11,7 @@ export type RunItem =
   | { readonly type: 'message'; readonly id: string; readonly text: string }
   | { readonly type: 'tool-call'; readonly call: ToolCall };
 
-export interface RunColumnProps {
+interface RunColumnProps {
   readonly agent: AgentId;
   readonly status: RunStatus;
   /** What the agent said and did so far, in order. */

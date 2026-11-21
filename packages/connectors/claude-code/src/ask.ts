@@ -6,8 +6,6 @@ import { environment } from './environment.ts';
 
 export interface AskOptions {
   readonly model: string;
-  /** Without a key, Claude Code uses the login already on the machine. */
-  readonly apiKey: string | undefined;
 }
 
 interface Question<Answer> extends AskOptions {
@@ -26,7 +24,7 @@ interface Question<Answer> extends AskOptions {
  * no API key; the price is the few seconds a Claude Code process takes to start. Throws when no answer comes.
  */
 export async function ask<Answer>(question: Question<Answer>): Promise<Answer> {
-  const { model, apiKey, instructions, data, schema, parse, signal } = question;
+  const { model, instructions, data, schema, parse, signal } = question;
   const abortController = new AbortController();
   const abort = () => abortController.abort();
   signal.addEventListener('abort', abort, { once: true });
@@ -36,7 +34,8 @@ export async function ask<Answer>(question: Question<Answer>): Promise<Answer> {
       prompt: data,
       options: {
         cwd: tmpdir(),
-        env: environment(apiKey),
+        // With a key the questions go to the API instead: here, Claude Code uses the login on the machine.
+        env: environment(undefined),
         model,
         systemPrompt: instructions,
         tools: [], // a question, not a job: nothing to read, write or run

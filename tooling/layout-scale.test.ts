@@ -28,7 +28,7 @@ function files(dir: string): string[] {
 }
 
 /** Off-scale layout spacing in a source: `utility-value` for each, padding under 12 px left out (control spacing). */
-export function offScale(code: string): string[] {
+function offScale(code: string): string[] {
   const lines = code.split('\n');
   return lines.flatMap((line, i) => {
     if (lines.slice(Math.max(0, i - 3), i + 1).some((l) => l.includes('layout-scale:'))) return [];

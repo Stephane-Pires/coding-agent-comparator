@@ -22,8 +22,7 @@ export function hostedRuntime(config: Config): Runtime {
     ...sandboxRuntime(
       {
         'claude-code': claudeCodeCommandLine(config.claudeCode),
-        // Codex's own inner sandbox cannot start inside a Vercel Sandbox, which already isolates the run.
-        codex: codexCommandLine({ ...config.codex, confinement: 'danger-full-access' }),
+        codex: codexCommandLine(config.codex),
       },
       { runLimitMs: config.sandboxRunLimitMs },
     ),

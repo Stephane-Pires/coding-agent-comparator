@@ -1,7 +1,8 @@
 // Makes the recordings that the `recorded` runtime replays: `pnpm fixtures:record`.
 // It runs each task below on the real agents, through the real use cases, and saves what happened. It uses your
 // keys or logins, so run it by hand: after an upgrade of an agent's SDK, once the live test passes.
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, realpathSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { AgentId, Task, type RunEvent } from '@comparator/domain';
@@ -46,5 +47,7 @@ for (const text of TASKS) {
   console.log(`${verdict.verdict.padEnd(8)} ${text}  ${endings.join(', ')}`);
   recordings.push({ task, verdict, runs });
 }
-writeFileSync(RECORDINGS_FILE, `${JSON.stringify(recordings, null, 2)}\n`);
+// The workspaces are temporary folders of this machine: their path is shown as `/tmp`, not as this machine's.
+const saved = JSON.stringify(recordings, null, 2).replaceAll(realpathSync(tmpdir()), '/tmp');
+writeFileSync(RECORDINGS_FILE, `${saved}\n`);
 console.log(`Saved ${recordings.length} recordings to fixtures/recordings.json`);

@@ -1,16 +1,24 @@
 'use client';
 
 import { useActionState, useEffect, useState, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 
-import { PageHeader } from '@comparator/ui/components/page-header';
 import { PasswordGate } from '@comparator/ui/components/password-gate';
-import { Signature } from '@comparator/ui/components/signature';
 
+import { MessagePage } from '../errors/error-page.tsx';
 import { api } from '../lib/api.ts';
-import { reducedMotion, withViewTransition } from '../lib/view-transition.ts';
 
 /** The time the padlock takes to open (`styles.css`, `padlock-open`), before the page changes. */
 const PADLOCK_OPENS_MS = 240;
+
+/**
+ * Opens the app: the browser fades the password page into it, unless it cannot or the person asked for less
+ * motion. React must have drawn the app by the time the browser pictures it, hence `flushSync`.
+ */
+function openTheApp(open: () => void, still: boolean) {
+  if (still || typeof document.startViewTransition !== 'function') open();
+  else document.startViewTransition(() => flushSync(open));
+}
 
 /** `checking`: the API has not said yet. `out`: the password is needed. `in`: the app can be shown. */
 type AccessState = 'checking' | 'out' | 'in';
@@ -40,8 +48,9 @@ export function AccessGate({ children }: { children: ReactNode }) {
     if (!allowed) return 'That is not the password. Check it and try again.';
     // The padlock opens, then the locker gives way to the app.
     setOpened(true);
-    if (!reducedMotion()) await new Promise((resolve) => setTimeout(resolve, PADLOCK_OPENS_MS));
-    withViewTransition(() => setState('in'));
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!still) await new Promise((resolve) => setTimeout(resolve, PADLOCK_OPENS_MS));
+    openTheApp(() => setState('in'), still);
     return undefined;
   }, undefined);
 
@@ -49,16 +58,8 @@ export function AccessGate({ children }: { children: ReactNode }) {
   if (failure !== undefined) throw failure;
   if (state === 'in') return children;
   return (
-    <div className="flex h-dvh flex-col">
-      <div className="page-frame py-4">
-        <PageHeader title={state === 'out' ? 'Password' : 'Compare coding agents'} />
-      </div>
-      <main className="page-frame flex min-h-0 flex-1" aria-busy={state === 'checking'}>
-        {state === 'out' && <PasswordGate action={enter} error={error} pending={pending} opened={opened} />}
-      </main>
-      <footer className="page-frame py-2">
-        <Signature />
-      </footer>
-    </div>
+    <MessagePage title={state === 'out' ? 'Password' : 'Compare coding agents'} busy={state === 'checking'}>
+      {state === 'out' && <PasswordGate action={enter} error={error} pending={pending} opened={opened} />}
+    </MessagePage>
   );
 }

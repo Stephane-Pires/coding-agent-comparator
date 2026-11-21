@@ -9,7 +9,7 @@ import { ICONS } from '@comparator/ui/icons';
  * leaning against the side. The padlock shakes once when `refused` becomes true: the answer to a wrong password.
  * Its shackle lifts when `opened`: the answer to the right one.
  */
-export function SkiLocker({
+function SkiLocker({
   refused = false,
   opened = false,
   ...props

@@ -202,7 +202,7 @@
         },
         {
           "kind": "message",
-          "text": "The working directory is empty, so there's no project to add tests to. I'll stop here rather than guess at one.\n\nI looked in `/private/var/folders/1q/dx94vc116hs09t60j3mh644w0000gn/T/comparator-vQCVlW` and it contains nothing: no source files, no `package.json` or other manifest, no test configuration, and it isn't a git repository. The `ls -la` output shows only `.` and `..`.\n\nI haven't written any tests or changed anything. To continue, I need one of these:\n\n- **The project's location.** If it lives elsewhere, give me the path and I'll look there.\n- **The project files.** If they were meant to be copied into this directory, check that the copy completed, then ask me again.\n- **The project itself.** If you want a new project started here, tell me the language and framework, and I'll set it up and add the tests."
+          "text": "The working directory is empty, so there's no project to add tests to. I'll stop here rather than guess at one.\n\nI looked in `/tmp/comparator-vQCVlW` and it contains nothing: no source files, no `package.json` or other manifest, no test configuration, and it isn't a git repository. The `ls -la` output shows only `.` and `..`.\n\nI haven't written any tests or changed anything. To continue, I need one of these:\n\n- **The project's location.** If it lives elsewhere, give me the path and I'll look there.\n- **The project files.** If they were meant to be copied into this directory, check that the copy completed, then ask me again.\n- **The project itself.** If you want a new project started here, tell me the language and framework, and I'll set it up and add the tests."
         },
         {
           "kind": "metrics",
@@ -253,7 +253,7 @@
               "command": "pwd && rg --files -g '\"'!node_modules'\"' -g '\"'!vendor'\"' | head -200"
             },
             "status": "succeeded",
-            "output": "/private/var/folders/1q/dx94vc116hs09t60j3mh644w0000gn/T/comparator-ywnZdy\n"
+            "output": "/tmp/comparator-ywnZdy\n"
           }
         },
         {

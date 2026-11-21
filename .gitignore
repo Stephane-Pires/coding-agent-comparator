@@ -19,6 +19,9 @@ test-results/
 e2e-videos/
 playwright-report/
 
+# Made by the pre-commit tooling on install
+.vite-hooks/_/
+
 # Vercel
 .vercel/
 

@@ -11,12 +11,6 @@ const isEvent = (line: unknown): line is ThreadEvent =>
 interface CommandLineOptions {
   readonly model: string;
   readonly apiKey: string | undefined;
-  /**
-   * How far Codex confines its own commands. `workspace-write` is its inner sandbox, which needs a normal machine.
-   * `danger-full-access` turns it off: only for a machine that is itself a throwaway sandbox, where the inner one
-   * cannot start and the outer one already isolates the run.
-   */
-  readonly confinement: 'workspace-write' | 'danger-full-access';
 }
 
 /**
@@ -24,7 +18,7 @@ interface CommandLineOptions {
  * `codex exec --json` prints the very events the SDK hands over, one per line, so the same translator reads them.
  * The options mirror those of `codexAgent`.
  */
-export function codexCommandLine({ model, apiKey, confinement }: CommandLineOptions) {
+export function codexCommandLine({ model, apiKey }: CommandLineOptions) {
   return {
     command: (task: string) => ({
       cmd: 'codex',
@@ -34,8 +28,9 @@ export function codexCommandLine({ model, apiKey, confinement }: CommandLineOpti
         '--skip-git-repo-check', // the workspace is an empty folder, not a repository
         '--model',
         model,
+        // Codex's own inner sandbox cannot start inside a Vercel Sandbox, which already isolates the run.
         '--sandbox',
-        confinement,
+        'danger-full-access',
         '--config',
         'model_reasoning_effort="low"',
         '--config',

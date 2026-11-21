@@ -7,7 +7,7 @@ import { Button } from '@comparator/ui/components/ui/button';
 import { Textarea } from '@comparator/ui/components/ui/textarea';
 import { ICONS } from '@comparator/ui/icons';
 
-export interface TaskInputProps {
+interface TaskInputProps {
   /** While runs are in progress the one button is Stop; otherwise it is Send. They are never shown together. */
   readonly running: boolean;
   readonly onSend: (task: Task) => void;

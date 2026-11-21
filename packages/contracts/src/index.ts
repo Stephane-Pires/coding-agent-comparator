@@ -16,11 +16,10 @@ import {
 export { AgentId, Metrics, RunOutcome, Task, TASK_MAX_LENGTH, TaskVerdict, ToolCall, WorkspaceFile };
 export type { RunStatus, Tool } from '@comparator/domain';
 
-export const RunInput = z.object({
+const RunInput = z.object({
   agent: AgentId.describe('The coding agent that runs the task.'),
   task: Task.describe('What the agent is asked to do, in plain language.'),
 });
-export type RunInput = z.infer<typeof RunInput>;
 
 /**
  * One chunk of a run's stream. The chunks follow the AI SDK's UI message stream, so `useChat` renders them
@@ -72,26 +71,23 @@ const INVALID_INPUT = {
   BAD_REQUEST: { status: 400, message: 'Input validation failed', data: InvalidInput },
 };
 
-export const TaskCheckInput = z.object({
+const TaskCheckInput = z.object({
   task: Task.describe('What the agents would be asked to do, in plain language.'),
 });
-export type TaskCheckInput = z.infer<typeof TaskCheckInput>;
 
 /** A call that needs the password and did not carry it. */
 const NO_ACCESS = {
   UNAUTHORIZED: { status: 401, message: 'This API is private: give its password first.' },
 };
 
-export const PASSWORD_MAX_LENGTH = 200;
-export const PasswordInput = z.object({
+const PASSWORD_MAX_LENGTH = 200;
+const PasswordInput = z.object({
   password: z.string().max(PASSWORD_MAX_LENGTH).describe('The password of the app.'),
 });
-export type PasswordInput = z.infer<typeof PasswordInput>;
 
-export const Access = z.object({
+const Access = z.object({
   allowed: z.boolean().describe('Whether this caller may check tasks and start runs.'),
 });
-export type Access = z.infer<typeof Access>;
 
 export const contract = {
   access: {

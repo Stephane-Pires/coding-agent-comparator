@@ -46,10 +46,7 @@ function live(response: Response): Response {
  *
  * This file builds the API from what it is given. `main.ts` serves it on a machine; `index.ts` hands it to Vercel.
  */
-export function createApp(
-  { startRun, checkTask }: AppDeps,
-  options: AccessOptions = { password: undefined, https: false },
-): Hono {
+export function createApp({ startRun, checkTask }: AppDeps, options: AccessOptions): Hono {
   const access = createAccess(options);
   const os = implement(contract).$context<Context>();
   // What can start work, and so spend the API keys, is for those who gave the password.

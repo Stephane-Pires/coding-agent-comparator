@@ -38,7 +38,7 @@ export interface Config {
   readonly recordedPaceMs: number;
   readonly claudeCode: { readonly model: string; readonly apiKey: string | undefined };
   readonly codex: { readonly model: string; readonly apiKey: string | undefined };
-  /** The check that a task is a coding task: asked to Claude Code, with its credentials. */
+  /** The two questions about a task (is it a coding task, was it done): with a key they go to the API. */
   readonly taskCheck: { readonly model: string; readonly apiKey: string | undefined };
 }
 

@@ -7,7 +7,7 @@ import { cn } from '@comparator/ui/lib/utils';
  * Voice): a run finished, did not finish, or was stopped. Colour is never the only signal: the
  * icon and the word say it too.
  */
-const STATUSES: Record<RunStatus, { label: string; tone: string }> = {
+export const RUN_STATUSES: Record<RunStatus, { label: string; tone: string }> = {
   running: { label: 'Running', tone: 'text-muted-foreground' },
   succeeded: { label: 'Finished', tone: 'text-success' },
   // Not an error: the agent stopped cleanly, without having done its task. Grey, with the reason in its column.
@@ -18,7 +18,7 @@ const STATUSES: Record<RunStatus, { label: string; tone: string }> = {
 
 /** Shows where a run stands: running, or how it ended. */
 export function RunStatusBadge({ status, className }: { status: RunStatus; className?: string }) {
-  const { label, tone } = STATUSES[status];
+  const { label, tone } = RUN_STATUSES[status];
   const Icon = ICONS.run[status];
   return (
     <span role="status" className={cn('inline-flex items-center gap-1 text-sm font-medium', tone, className)}>

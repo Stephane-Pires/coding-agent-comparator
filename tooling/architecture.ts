@@ -31,7 +31,8 @@ const SERVER_ONLY = [
   '@openai/codex-sdk',
   '@vercel/sandbox',
 ];
-const RUNTIME = ['node:'];
+/** Runtime built-ins, which only some layers may import. */
+export const RUNTIME_PREFIXES = ['node:'];
 
 /** A driven adapter implements a port: it depends on the core only, never on another adapter, the API or the UI. */
 const adapter = (dir: string): PackageRule => ({
@@ -48,7 +49,7 @@ const ui = (dir: string, internal: readonly string[]): PackageRule => ({
   layer: 'ui',
   internal,
   external: ['*'],
-  forbiddenExternal: [...SERVER_ONLY, ...RUNTIME],
+  forbiddenExternal: [...SERVER_ONLY, ...RUNTIME_PREFIXES],
 });
 
 export const RULES: Readonly<Record<string, PackageRule>> = {
@@ -90,4 +91,3 @@ export const RULES: Readonly<Record<string, PackageRule>> = {
 
 /** Layers allowed to use runtime built-ins (`node:*`). */
 export const RUNTIME_LAYERS: ReadonlySet<Layer> = new Set(['adapter', 'app']);
-export const RUNTIME_PREFIXES = RUNTIME;

@@ -27,17 +27,6 @@ const codex: RunTrack = {
   durationMs: 8900,
 };
 
-/** The task is still being checked: both agents wait at the start. */
-export const AtTheStart: Story = {
-  args: {
-    now: 0,
-    tracks: [
-      { agent: 'claude-code', status: undefined, gates: [] },
-      { agent: 'codex', status: undefined, gates: [] },
-    ],
-  },
-};
-
 /** Both run. One has a tool call in progress: its gate is hollow. */
 export const BothRunning: Story = {
   args: {

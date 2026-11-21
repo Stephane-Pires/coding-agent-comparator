@@ -8,7 +8,7 @@ import { questions } from '../runtimes/local.ts';
 
 /**
  * What an evaluation measures: the two questions as the server would ask them, on the route named on the command
- * line. `api` is the Anthropic API directly and needs a key; `claude-code` is Claude Code, on the key or on the
+ * line. `api` is the Anthropic API directly and needs a key; `claude-code` is Claude Code, always on the
  * machine's login. With no name, it is the route the server itself would take.
  */
 export function route(): { name: string; model: string; classifier: TaskClassifier; reviewer: RunReviewer } {

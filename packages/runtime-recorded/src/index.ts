@@ -50,7 +50,7 @@ const pause = (ms: number, signal: AbortSignal) =>
  */
 export function recordedRuntime(
   recordings: readonly Recording[],
-  { paceMs = 60 }: { readonly paceMs?: number } = {},
+  { paceMs }: { readonly paceMs: number },
 ): RecordedRuntime {
   const known = (task: string) => recordings.find((recording) => recording.task === task);
   const played = (task: string) =>

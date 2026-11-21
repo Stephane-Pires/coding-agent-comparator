@@ -37,9 +37,7 @@ const reasonOf = (error: unknown): string => (error instanceof Error ? error.mes
 function followFiles(workspaces: WorkspaceProvider, workspace: Workspace) {
   const known = new Map<string, WorkspaceFile>();
   return {
-    /** How many files the workspace held at the last read. */
-    count: () => [...known.values()].filter((file) => file.state !== 'deleted').length,
-    /** The paths of those files. */
+    /** The paths of the files the workspace held at the last read. */
     paths: () => [...known.values()].filter((file) => file.state !== 'deleted').map((file) => file.path),
     async *changes(): AsyncGenerator<RunEvent, void, void> {
       const files = await workspaces.read(workspace);
@@ -132,7 +130,7 @@ export const startRun = ({ agents, workspaces, clock, checkTask, reviewRun }: St
           durationMs: Math.round((endedAt ?? clock.now()) - startedAt),
           usage,
           toolCalls: toolCalls.size,
-          files: files.count(),
+          files: files.paths().length,
         };
         yield { kind: 'metrics', metrics };
       }
