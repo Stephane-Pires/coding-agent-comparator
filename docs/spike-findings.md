@@ -134,7 +134,8 @@ live hint in the chat. A shell command that writes a file is shown as a shell co
 `result.usage` in Claude Code covers the main loop only; `modelUsage` is the one to read. Codex's cost needs a price
 table per model, or stays empty.
 
-To confirm with an API key: that the cost and usage fields are the same as on a subscription.
+Confirmed with API keys on 2026-11-21 (see "With API keys" below): the cost and usage fields are the same as on a
+subscription.
 
 ### Failure and cancel
 
@@ -223,10 +224,30 @@ name and temp paths were replaced.
 | `bad-model.json` | Error result, then a throw                    | `error`, `turn.failed`, then a throw    |
 | `abort.json`     | Cancelled after 9 s                           | Cancelled after 9 s                     |
 
+## With API keys
+
+Measured on 2026-11-21 (ticket 22), with an Anthropic key and an OpenAI key in `.env`. Everything before this
+section ran on subscription logins.
+
+| Question                                     | Answer                                                                                                          |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Does Claude Code use the key?                | Yes. Its first message says `apiKeySource: ANTHROPIC_API_KEY`; with no key it says `none` and uses the login.   |
+| Does Codex run on the key alone?             | Yes: it completes with the key and an empty home folder, where no login exists.                                 |
+| And with neither?                            | OpenAI answers 401, "Missing bearer or basic authentication".                                                   |
+| Are the usage fields the same as on a login? | Yes, for both. Codex also sends `cache_write_input_tokens` and `reasoning_output_tokens`, which we do not read. |
+| Does Claude Code still report a cost?        | Yes, as on a login. Codex reports none in either case.                                                          |
+| Does the whole app work on keys?             | Yes: `pnpm test:e2e:live` passes, and a run of each agent through the API ends with its totals.                 |
+| Do the task check and the run review work?   | Yes: 32 of 32 and 24 of 24 on their sets, about 3.3 seconds per question, as on a login.                        |
+
+A key takes over from the login as soon as it is set: the server gives each agent its own key, and nothing else of
+its environment that could carry a credential.
+
+One caution about where the keys are kept: a tool that watches the project folder can see `.env`, though git ignores
+it. Keys for this project should be made for it, with a spending cap, or kept in a file outside the folder.
+
 ## Still to verify
 
-- Cost and usage fields with an API key (recorded here on a subscription).
-- A full agent run inside a sandbox (ticket 13, needs API keys).
+- A full agent run inside a sandbox (ticket 24, with the API keys).
 - Restricting Claude Code's tool list with `tools` or `disallowedTools`, and what each Codex switch does: first step of
   ticket 10b (DEV-199, tool access).
 - Rate-limit events from both agents: parked ticket DEV-198 (rate limits).
