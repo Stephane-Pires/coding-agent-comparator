@@ -1,0 +1,10 @@
+{
+  // Read by Vercel's build of the API, which compiles from this folder. It is the root configuration, with one
+  // addition: where the Node types are. They are installed at the root of the workspace, and that build does not
+  // look there by itself ("Cannot find type definition file for 'node'").
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "typeRoots": ["../../node_modules/@types", "./node_modules/@types"]
+  },
+  "include": ["src"]
+}

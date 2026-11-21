@@ -273,4 +273,8 @@ Done once, in Vercel's dashboard.
    The sandbox token is not in this list: Vercel gives it to the API by itself. `API_URL` is read when the web app
    is built: after changing it, deploy the web project again.
 
+   Vercel's build can be run on a dev machine, to see a failure without deploying: in a plain clone (not a git
+   worktree), from `apps/server`, link the folder with `vercel link`, set `"framework": "hono"` in
+   `.vercel/project.json`, then `pnpm dlx vercel@latest build`.
+
 3. Deploy the API first, then the web app. From then on, a push to `main` deploys both.
