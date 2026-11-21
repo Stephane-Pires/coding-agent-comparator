@@ -30,7 +30,7 @@ const column = (page: Page, agent: string) => page.locator(`section[aria-label="
 /** Gives the password, as a person would on a first visit. */
 async function enter(page: Page) {
   await page.goto('/');
-  await page.getByLabel('Password').fill(PASSWORD);
+  await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Enter' }).click();
   // By its name: the password field is a text box too.
   await expect(page.getByRole('textbox', { name: TASK_FIELD })).toBeVisible();
@@ -97,7 +97,7 @@ test('the password: no call works without it, a wrong one says so, and the right
   request,
 }, testInfo) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Your pass, please.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'The ski locker is locked.' })).toBeVisible();
   await expect(page.getByRole('textbox', { name: TASK_FIELD })).toHaveCount(0);
   // Through the app or straight to the API's own address: a call that would spend the keys is refused.
   const api = String(testInfo.config.metadata['api']);
@@ -108,11 +108,16 @@ test('the password: no call works without it, a wrong one says so, and the right
   const withPassword = { data: task, headers: { authorization: `Bearer ${PASSWORD}` } };
   expect((await request.post(`${api}/api/tasks/check`, withPassword)).status()).toBe(200);
 
-  await page.getByLabel('Password').fill('not the password');
+  await page.getByLabel('Password', { exact: true }).fill('not the password');
+  // The eye shows what was typed, and hides it again.
+  await page.getByRole('button', { name: 'Show the password' }).click();
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('type', 'text');
+  await page.getByRole('button', { name: 'Hide the password' }).click();
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('type', 'password');
   await page.getByRole('button', { name: 'Enter' }).click();
   await expect(page.getByRole('alert').filter({ hasText: 'That is not the password' })).toBeVisible();
 
-  await page.getByLabel('Password').fill(PASSWORD);
+  await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
   await page.getByRole('button', { name: 'Enter' }).click();
   await expect(page.getByRole('textbox', { name: TASK_FIELD })).toBeVisible();
   // The pass is kept: the page loaded again goes straight to the app.

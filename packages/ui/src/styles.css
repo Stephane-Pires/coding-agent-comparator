@@ -228,6 +228,21 @@
 .logo-button:focus-visible .logo-cursor {
   animation: logo-cursor 900ms steps(1, end) infinite;
 }
+/* The padlock of the password page says no: it shakes once after a wrong password. */
+@keyframes padlock-refused {
+  20%,
+  60% {
+    transform: translateX(-3px);
+  }
+  40%,
+  80% {
+    transform: translateX(3px);
+  }
+}
+.padlock-refused {
+  animation: padlock-refused 320ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --duration-fast: 0ms;

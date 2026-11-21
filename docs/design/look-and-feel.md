@@ -87,6 +87,9 @@ durations become 0) and the spinner stays as a still icon.
 A third one: **the logo answers a pointer**: its hat hops once and its cursor blinks while it is pointed at, to say
 that it can be clicked (a click goes back to the start page).
 
+Within the rule, not an exception: **the padlock of the password page shakes once after a wrong password**, in
+320 ms. It shows the result of what the user just did.
+
 A fourth one: **pink snow falls once over the page when every agent of a comparison finished**, for about five
 seconds. It is the product's one celebration: it never loops, never falls for a run that failed or was stopped, and
 catches no click.
@@ -110,7 +113,8 @@ already called it a "run"; the voice takes that word seriously, lightly, the way
   testing with a reader who never skied: fresh snow, on the course, out of the gate, piste, powder.
 - The two pages with no content keep the theme in their title and say the plain fact beside it: a missing page is
   "Off the marked runs." then "This page is not on the map."; a failure on our side is "The lift is stopped." then
-  "Something broke on our side."
+  "Something broke on our side." The password page follows them: "The ski locker is locked." then "This app is
+  private. Enter its password to start a run."
 - Numbers, errors and code stay plain. The reason a run did not finish is the agent's own words, never rewritten.
 
 ## Layout

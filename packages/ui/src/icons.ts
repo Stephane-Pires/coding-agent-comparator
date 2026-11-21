@@ -6,6 +6,8 @@ import {
   CircleCheck,
   CircleDashed,
   CircleX,
+  Eye,
+  EyeOff,
   FilePen,
   Globe,
   Hexagon,
@@ -47,4 +49,6 @@ export const ICONS = {
   expand: ChevronDown,
   send: ArrowUp,
   stop: Square,
+  /** What a press would do to a hidden field: show it, or hide it again. */
+  reveal: { show: Eye, hide: EyeOff },
 };
