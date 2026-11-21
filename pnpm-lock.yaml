@@ -41,6 +41,9 @@ importers:
       '@comparator/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@comparator/runtime-recorded':
+        specifier: workspace:*
+        version: link:../../packages/runtime-recorded
       '@comparator/workspace-local':
         specifier: workspace:*
         version: link:../../packages/workspace-local
@@ -168,6 +171,21 @@ importers:
 
   packages/domain:
     dependencies:
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+
+  packages/runtime-recorded:
+    dependencies:
+      '@comparator/application':
+        specifier: workspace:*
+        version: link:../application
+      '@comparator/domain':
+        specifier: workspace:*
+        version: link:../domain
+      neverthrow:
+        specifier: ^8.2.0
+        version: 8.2.0
       zod:
         specifier: ^4.6.7
         version: 4.6.7

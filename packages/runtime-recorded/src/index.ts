@@ -1,0 +1,132 @@
+import { okAsync } from 'neverthrow';
+import { z } from 'zod';
+
+import type { CodingAgent, RunReviewer, TaskClassifier, WorkspaceProvider } from '@comparator/application';
+import { AgentId, RunEvent, TaskVerdict, type AgentEvent, type WorkspaceFile } from '@comparator/domain';
+
+/**
+ * One task as it really went: what the task check said, and for each agent the events of its run, as `startRun`
+ * yielded them. Made by `pnpm fixtures:record`, from real runs.
+ */
+export const Recording = z.object({
+  task: z.string(),
+  verdict: TaskVerdict,
+  /** Empty when the task was refused: no agent ran. */
+  runs: z.partialRecord(AgentId, z.array(RunEvent)),
+});
+export type Recording = z.infer<typeof Recording>;
+
+export interface RecordedRuntime {
+  readonly agents: Readonly<Record<AgentId, CodingAgent>>;
+  readonly workspaces: WorkspaceProvider;
+  readonly classifier: TaskClassifier;
+  readonly reviewer: RunReviewer;
+}
+
+/** What an agent said in a run, as the run hands it to a reviewer: its messages, in order. */
+const answerOf = (events: readonly RunEvent[]): string =>
+  events.flatMap((event) => (event.kind === 'message' ? [event.text] : [])).join('\n\n');
+
+/** Waits `ms`, or less if the run is aborted. */
+const pause = (ms: number, signal: AbortSignal) =>
+  new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    signal.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      { once: true },
+    );
+  });
+
+/**
+ * Stands in for the real agents, their workspaces and the two questions asked to a model, by replaying recordings.
+ * Everything above the ports runs for real: the use cases, the API, the stream and the page.
+ *
+ * A task is answered with its own recording; any other task gets the first recording that was accepted, so the app
+ * always has something to show. Events are `paceMs` apart, so a run is seen arriving.
+ */
+export function recordedRuntime(
+  recordings: readonly Recording[],
+  { paceMs = 60 }: { readonly paceMs?: number } = {},
+): RecordedRuntime {
+  const known = (task: string) => recordings.find((recording) => recording.task === task);
+  const played = (task: string) =>
+    known(task) ?? recordings.find((recording) => recording.verdict.verdict === 'accepted');
+  // The files of each open workspace, by path: what a recorded agent "wrote" so far.
+  const open = new Map<string, Map<string, WorkspaceFile>>();
+  let created = 0;
+
+  const agent = (id: AgentId): CodingAgent => ({
+    async *run({ task, workspace, signal }): AsyncGenerator<AgentEvent, void, void> {
+      const events = played(task)?.runs[id] ?? [];
+      const files = open.get(workspace.path);
+      const metrics = events.flatMap((event) => (event.kind === 'metrics' ? [event.metrics] : [])).at(0);
+      if (metrics?.model) yield { kind: 'model', model: metrics.model };
+      for (const [index, event] of events.entries()) {
+        if (signal.aborted) return;
+        // A run observes these itself: the files by reading the workspace, the totals by counting.
+        if (event.kind === 'file' || event.kind === 'metrics') continue;
+        // The files recorded right after this event are in the workspace before the run looks for them.
+        for (let next = events[index + 1], ahead = 1; next?.kind === 'file'; next = events[index + ++ahead])
+          files?.set(next.file.path, next.file);
+        if (event.kind !== 'finished') {
+          await pause(paceMs, signal);
+          yield event;
+          continue;
+        }
+        if (metrics?.usage) yield { kind: 'usage', usage: metrics.usage };
+        // An incomplete run is one whose agent stopped cleanly: the reviewer below is what calls it incomplete.
+        const { outcome } = event;
+        yield {
+          kind: 'finished',
+          outcome: outcome.status === 'incomplete' ? { status: 'succeeded' } : outcome,
+        };
+        return;
+      }
+    },
+  });
+
+  return {
+    agents: { 'claude-code': agent('claude-code'), codex: agent('codex') },
+    workspaces: {
+      create() {
+        const path = `recorded-${++created}`;
+        open.set(path, new Map());
+        return okAsync({ path });
+      },
+      read: (workspace) =>
+        Promise.resolve(
+          [...(open.get(workspace.path)?.values() ?? [])].filter((file) => file.state !== 'deleted'),
+        ),
+      dispose(workspace) {
+        open.delete(workspace.path);
+        return Promise.resolve();
+      },
+    },
+    classifier: {
+      assess(task) {
+        const verdict = known(task)?.verdict;
+        return Promise.resolve(
+          verdict?.verdict === 'refused'
+            ? { reason: verdict.reason, isCodingTask: false, resultIsFiles: false }
+            : { reason: 'A recorded task.', isCodingTask: true, resultIsFiles: true },
+        );
+      },
+    },
+    reviewer: {
+      // A reviewer is not told which agent it reads: the run is found by what the agent said.
+      review({ task, answer }) {
+        const run = Object.values(played(task)?.runs ?? {}).find((events) => answerOf(events) === answer);
+        const outcome = run?.flatMap((event) => (event.kind === 'finished' ? [event.outcome] : [])).at(0);
+        return Promise.resolve(
+          outcome?.status === 'incomplete'
+            ? { reason: outcome.reason, taskDone: false }
+            : { reason: 'Recorded as done.', taskDone: true },
+        );
+      },
+    },
+  };
+}

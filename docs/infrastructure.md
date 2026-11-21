@@ -77,6 +77,28 @@ Like the task check, the question goes to Claude Code with no tools, on the mode
 about three seconds, which are not counted in the run's duration. If the model cannot be reached, the run counts as
 finished. `pnpm eval:run-review` measures the instructions on the labelled runs of `fixtures/run-review.json`.
 
+### Recorded runs, and the end-to-end test
+
+With `AGENT_RUNTIME=recorded` the API replays recordings of real runs (`fixtures/recordings.json`) in place of the
+agents, their workspaces and the two questions asked to a model. Nothing calls a provider, so it needs no key and no
+login, and it gives the same answer whatever the task. Everything above the ports is the real code.
+
+One browser test uses both runtimes:
+
+| Command              | Runs on                        | Guards                                         |
+| -------------------- | ------------------------------ | ---------------------------------------------- |
+| `pnpm test:e2e`      | the recordings                 | our own code: the use cases, the API, the page |
+| `pnpm test:e2e:live` | the real Claude Code and Codex | the agents: a change in what they send         |
+
+To see what a test does, one command: `pnpm test:e2e:film`. It plays the recorded tests at a speed a person can
+read and saves a video of each under its name in `e2e-videos/` (ignored by git). Add `E2E_RUNTIME=local` in front
+to film the real agents the same way.
+
+A recording cannot show that an agent changed. An agent's binary comes with its SDK, at the version the lockfile
+pins, so that can only happen on an upgrade: then run the live test, and make the recordings again with
+`pnpm fixtures:record`. Both tests start their own API and a production build of the web app, on ports 3011 and
+3110 (`E2E_API_PORT` and `E2E_WEB_PORT` change them), beside a dev server if one is running.
+
 ### Routes
 
 | Route                   | What it serves                                                    |
@@ -99,6 +121,7 @@ Read from the environment, and from a `.env` file at the root of the repository 
 | `CLAUDE_CODE_MODEL` | `haiku`                 | The model Claude Code runs on                                           |
 | `CODEX_MODEL`       | `gpt-6-luna`            | The model Codex runs on                                                 |
 | `TASK_CHECK_MODEL`  | `haiku`                 | The model that checks a task before a run and reviews it after          |
+| `AGENT_RUNTIME`     | `local`                 | `local`: the real agents. `recorded`: recordings of real runs, no key   |
 | `PORT`              | `3001`                  | The port of the API                                                     |
 | `API_URL`           | `http://localhost:3001` | Read by the web app: where it forwards `/rpc`. Not sent to the browser. |
 

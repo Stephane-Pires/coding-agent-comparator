@@ -14,6 +14,7 @@
     "@comparator/connector-codex": "workspace:*",
     "@comparator/contracts": "workspace:*",
     "@comparator/domain": "workspace:*",
+    "@comparator/runtime-recorded": "workspace:*",
     "@comparator/workspace-local": "workspace:*",
     "@hono/node-server": "^2.1.9",
     "@orpc/openapi": "^1.16.4",

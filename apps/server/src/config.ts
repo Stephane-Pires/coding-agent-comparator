@@ -12,11 +12,17 @@ const Environment = z.object({
   CLAUDE_CODE_MODEL: optional(z.string()).default('haiku'),
   CODEX_MODEL: optional(z.string()).default('gpt-6-luna'),
   TASK_CHECK_MODEL: optional(z.string()).default('haiku'),
+  AGENT_RUNTIME: optional(z.enum(['local', 'recorded'])).default('local'),
+  RECORDED_PACE_MS: optional(z.coerce.number().int().min(0)).default(60),
   PORT: optional(z.coerce.number().int().min(1).max(65_535)).default(3001),
 });
 
 export interface Config {
   readonly port: number;
+  /** `local`: the real agents, on this machine. `recorded`: recordings of real runs, with no key and no login. */
+  readonly runtime: 'local' | 'recorded';
+  /** In the `recorded` runtime, the milliseconds between two steps of an agent. */
+  readonly recordedPaceMs: number;
   readonly claudeCode: { readonly model: string; readonly apiKey: string | undefined };
   readonly codex: { readonly model: string; readonly apiKey: string | undefined };
   /** The check that a task is a coding task: asked to Claude Code, with its credentials. */
@@ -33,6 +39,8 @@ export function readConfig(env: Readonly<Record<string, string | undefined>>): R
   const { data } = parsed;
   return ok({
     port: data.PORT,
+    runtime: data.AGENT_RUNTIME,
+    recordedPaceMs: data.RECORDED_PACE_MS,
     claudeCode: { model: data.CLAUDE_CODE_MODEL, apiKey: data.ANTHROPIC_API_KEY },
     codex: { model: data.CODEX_MODEL, apiKey: data.OPENAI_API_KEY },
     taskCheck: { model: data.TASK_CHECK_MODEL, apiKey: data.ANTHROPIC_API_KEY },

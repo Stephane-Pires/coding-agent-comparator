@@ -6,6 +6,8 @@ describe('readConfig', () => {
   it('needs nothing: no key means the agents use the login on the machine', () => {
     expect(readConfig({})._unsafeUnwrap()).toEqual({
       port: 3001,
+      runtime: 'local',
+      recordedPaceMs: 60,
       claudeCode: { model: 'haiku', apiKey: undefined },
       codex: { model: 'gpt-6-luna', apiKey: undefined },
       taskCheck: { model: 'haiku', apiKey: undefined },
@@ -22,6 +24,8 @@ describe('readConfig', () => {
     })._unsafeUnwrap();
     expect(config).toEqual({
       port: 4000,
+      runtime: 'local',
+      recordedPaceMs: 60,
       claudeCode: { model: 'sonnet', apiKey: 'key-a' },
       codex: { model: 'other', apiKey: 'key-o' },
       taskCheck: { model: 'haiku', apiKey: 'key-a' },

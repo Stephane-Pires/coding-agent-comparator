@@ -1,0 +1,316 @@
+[
+  {
+    "task": "Create hello.mjs that prints hi, then run it.",
+    "verdict": {
+      "verdict": "accepted"
+    },
+    "runs": {
+      "claude-code": [
+        {
+          "kind": "tool-call",
+          "call": {
+            "id": "toolu_01V28CMv56teaNwrmSq9LQXW",
+            "tool": {
+              "type": "file-edit",
+              "path": "hello.mjs",
+              "change": "created",
+              "diff": ""
+            },
+            "status": "running",
+            "output": ""
+          }
+        },
+        {
+          "kind": "tool-call",
+          "call": {
+            "id": "toolu_01V28CMv56teaNwrmSq9LQXW",
+            "tool": {
+              "type": "file-edit",
+              "path": "hello.mjs",
+              "change": "created",
+              "diff": ""
+            },
+            "status": "succeeded",
+            "output": ""
+          }
+        },
+        {
+          "kind": "file",
+          "file": {
+            "path": "hello.mjs",
+            "content": "console.log(\"hi\");\n",
+            "state": "complete"
+          }
+        },
+        {
+          "kind": "tool-call",
+          "call": {
+            "id": "toolu_01MotCUu6PyaNURLwdS2rgLL",
+            "tool": {
+              "type": "command",
+              "command": "node hello.mjs"
+            },
+            "status": "running",
+            "output": ""
+          }
+        },
+        {
+          "kind": "tool-call",
+          "call": {
+            "id": "toolu_01MotCUu6PyaNURLwdS2rgLL",
+            "tool": {
+              "type": "command",
+              "command": "node hello.mjs"
+            },
+            "status": "succeeded",
+            "output": "hi"
+          }
+        },
+        {
+          "kind": "message",
+          "text": "I created `hello.mjs` in the working directory with a single line, `console.log(\"hi\");`, and ran it with Node. It printed:\n\n```\nhi\n```"
+        },
+        {
+          "kind": "metrics",
+          "metrics": {
+            "model": "claude-haiku-5-5",
+            "durationMs": 3602,
+            "usage": {
+              "inputTokens": 39029,
+              "cachedInputTokens": 31034,
+              "outputTokens": 322,
+              "costUsd": 0.00195174
+            },
+            "toolCalls": 2,
+            "files": 1
+          }
+        },
+        {
+          "kind": "finished",
+          "outcome": {
+            "status": "succeeded"
+          }
+        }
+      ],
+      "codex": [
+        {
+          "kind": "message",
+          "text": "I’ll add the small script in the current workspace and run it with Node."
+        },
+        {
+          "kind": "tool-call",
+          "call": {
+            "id": "item_1",
+            "tool": {
+              "type": "command",
+              "command": "cat > hello.mjs <<'EOF'\nconsole.log('hi');\nEOF\nnode hello.mjs"
+            },
+            "status": "running",
+            "output": ""
+          }
+        },
+        {
+          "kind": "tool-call",
+          "call": {
+            "id": "item_1",
+            "tool": {
+              "type": "command",
+              "command": "cat > hello.mjs <<'EOF'\nconsole.log('hi');\nEOF\nnode hello.mjs"
+            },
+            "status": "succeeded",
+            "output": "hi\n"
+          }
+        },
+        {
+          "kind": "file",
+          "file": {
+            "path": "hello.mjs",
+            "content": "console.log('hi');\n",
+            "state": "complete"
+          }
+        },
+        {
+          "kind": "message",
+          "text": "Created `hello.mjs` and ran it. It printed `hi`."
+        },
+        {
+          "kind": "metrics",
+          "metrics": {
+            "model": "gpt-6-luna",
+            "durationMs": 8879,
+            "usage": {
+              "inputTokens": 37024,
+              "cachedInputTokens": 14976,
+              "outputTokens": 150,
+              "costUsd": null
+            },
+            "toolCalls": 1,
+            "files": 1
+          }
+        },
+        {
+          "kind": "finished",
+          "outcome": {
+            "status": "succeeded"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "task": "hello",
+    "verdict": {
+      "verdict": "refused",
+      "reason": "\"hello\" is a greeting, not a request to build or change software. Describe a script, function or small project to get code files."
+    },
+    "runs": {}
+  },
+  {
+    "task": "Add unit tests to the existing project.",
+    "verdict": {
+      "verdict": "accepted"
+    },
+    "runs": {
+      "claude-code": [
+        {
+          "kind": "message",
+          "text": "I'll start by looking at the project layout and any existing test setup."
+        },
+        {
+          "kind": "tool-call",
+          "call": {
+            "id": "toolu_016wXmfagdC3FZmXTRiu9kqj",
+            "tool": {
+              "type": "command",
+              "command": "find . -path ./node_modules -prune -o -type f -print | grep -v '/\\.git/' | head -200 && echo --- && cat package.json 2>/dev/null; ls -la"
+            },
+            "status": "running",
+            "output": ""
+          }
+        },
+        {
+          "kind": "tool-call",
+          "call": {
+            "id": "toolu_016wXmfagdC3FZmXTRiu9kqj",
+            "tool": {
+              "type": "command",
+              "command": "find . -path ./node_modules -prune -o -type f -print | grep -v '/\\.git/' | head -200 && echo --- && cat package.json 2>/dev/null; ls -la"
+            },
+            "status": "succeeded",
+            "output": "---\ntotal 0\ndrwx------@    2 stephanepires  staff      64 Nov 21 10:23 .\ndrwx------@ 4767 stephanepires  staff  152544 Nov 21 10:23 .."
+          }
+        },
+        {
+          "kind": "message",
+          "text": "The working directory is empty, so there's no project to add tests to. I'll stop here rather than guess at one.\n\nI looked in `/private/var/folders/1q/dx94vc116hs09t60j3mh644w0000gn/T/comparator-vQCVlW` and it contains nothing: no source files, no `package.json` or other manifest, no test configuration, and it isn't a git repository. The `ls -la` output shows only `.` and `..`.\n\nI haven't written any tests or changed anything. To continue, I need one of these:\n\n- **The project's location.** If it lives elsewhere, give me the path and I'll look there.\n- **The project files.** If they were meant to be copied into this directory, check that the copy completed, then ask me again.\n- **The project itself.** If you want a new project started here, tell me the language and framework, and I'll set it up and add the tests."
+        },
+        {
+          "kind": "metrics",
+          "metrics": {
+            "model": "claude-haiku-5-5",
+            "durationMs": 5162,
+            "usage": {
+              "inputTokens": 38917,
+              "cachedInputTokens": 30546,
+              "outputTokens": 679,
+              "costUsd": 0.0022011599999999997
+            },
+            "toolCalls": 1,
+            "files": 0
+          }
+        },
+        {
+          "kind": "finished",
+          "outcome": {
+            "status": "incomplete",
+            "reason": "The agent found the working folder empty, wrote no tests, and asked the user for the project's location. It made one tool call and did not search further for an existing project."
+          }
+        }
+      ],
+      "codex": [
+        {
+          "kind": "message",
+          "text": "I’ll inspect the project structure and current test setup first, then add focused unit tests that fit the existing conventions."
+        },
+        {
+          "kind": "tool-call",
+          "call": {
+            "id": "item_1",
+            "tool": {
+              "type": "command",
+              "command": "pwd && rg --files -g '\"'!node_modules'\"' -g '\"'!vendor'\"' | head -200"
+            },
+            "status": "running",
+            "output": ""
+          }
+        },
+        {
+          "kind": "tool-call",
+          "call": {
+            "id": "item_1",
+            "tool": {
+              "type": "command",
+              "command": "pwd && rg --files -g '\"'!node_modules'\"' -g '\"'!vendor'\"' | head -200"
+            },
+            "status": "succeeded",
+            "output": "/private/var/folders/1q/dx94vc116hs09t60j3mh644w0000gn/T/comparator-ywnZdy\n"
+          }
+        },
+        {
+          "kind": "message",
+          "text": "The file listing came back empty, so I’m checking hidden files and repository metadata to determine whether this workspace contains a project or a blank checkout."
+        },
+        {
+          "kind": "tool-call",
+          "call": {
+            "id": "item_3",
+            "tool": {
+              "type": "command",
+              "command": "ls -la && git status --short && git rev-parse --show-toplevel 2>/dev/null || true"
+            },
+            "status": "running",
+            "output": ""
+          }
+        },
+        {
+          "kind": "tool-call",
+          "call": {
+            "id": "item_3",
+            "tool": {
+              "type": "command",
+              "command": "ls -la && git status --short && git rev-parse --show-toplevel 2>/dev/null || true"
+            },
+            "status": "succeeded",
+            "output": "total 0\ndrwx------@    2 stephanepires  staff      64 Nov 21 10:23 .\ndrwx------@ 4767 stephanepires  staff  152544 Nov 21 10:23 ..\nfatal: not a git repository (or any of the parent directories): .git\n"
+          }
+        },
+        {
+          "kind": "message",
+          "text": "This workspace is empty and isn’t a Git repository, so there’s no existing project or test setup to add unit tests to. Point me to the project directory or provide the files, and I can add tests that match its conventions."
+        },
+        {
+          "kind": "metrics",
+          "metrics": {
+            "model": "gpt-6-luna",
+            "durationMs": 8298,
+            "usage": {
+              "inputTokens": 55802,
+              "cachedInputTokens": 49408,
+              "outputTokens": 225,
+              "costUsd": null
+            },
+            "toolCalls": 2,
+            "files": 0
+          }
+        },
+        {
+          "kind": "finished",
+          "outcome": {
+            "status": "incomplete",
+            "reason": "The task was to add unit tests to an existing project, but the workspace was empty with no project or test setup. The agent checked, reported this, and asked for the project files, so no tests were written."
+          }
+        }
+      ]
+    }
+  }
+]

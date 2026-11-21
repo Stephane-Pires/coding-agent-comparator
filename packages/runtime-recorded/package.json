@@ -1,0 +1,16 @@
+{
+  "name": "@comparator/runtime-recorded",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Replays recorded runs in place of the real agents: no key, no login, the same answer every time.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@comparator/application": "workspace:*",
+    "@comparator/domain": "workspace:*",
+    "neverthrow": "^8.2.0",
+    "zod": "^4.6.7"
+  }
+}

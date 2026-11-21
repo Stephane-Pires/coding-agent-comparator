@@ -74,7 +74,11 @@ export default defineConfig({
         },
       },
       {
-        files: ['packages/connectors/*/src/**', 'packages/workspace-local/src/**'],
+        files: [
+          'packages/connectors/*/src/**',
+          'packages/workspace-local/src/**',
+          'packages/runtime-recorded/src/**',
+        ],
         excludeFiles: ['**/*.test.ts'],
         rules: {
           'no-restricted-imports': [

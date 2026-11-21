@@ -16,6 +16,7 @@ storybook-static/
 # Tests
 coverage/
 test-results/
+e2e-videos/
 playwright-report/
 
 # Vercel

@@ -19,6 +19,13 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["packages/**/src", "apps/*/src", "tooling", "vite.config.ts", "playwright.storybook.config.ts"],
+  "include": [
+    "packages/**/src",
+    "apps/*/src",
+    "tooling",
+    "vite.config.ts",
+    "playwright.storybook.config.ts",
+    "playwright.e2e.config.ts"
+  ],
   "exclude": ["**/node_modules", "packages/ui", "apps/web"]
 }
