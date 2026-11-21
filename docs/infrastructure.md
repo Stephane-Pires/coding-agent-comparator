@@ -74,7 +74,7 @@ do. So when an agent stops cleanly, the API asks a model one more question: was 
 task, what the agent said, the paths of the files it left and how many tools it called, and never which agent it was.
 A run that did not do its task ends as **incomplete**, with one sentence saying what is missing.
 
-The question takes the same route as the task check, on the model set by `TASK_CHECK_MODEL`: under a second through
+The question takes the same route as the task check, on the same small model: under a second through
 the API, about three through Claude Code. That time is not counted in the run's duration. If the model cannot be reached, the run counts as
 finished. `pnpm eval:run-review` measures the instructions on the labelled runs of `fixtures/run-review.json`.
 
@@ -100,7 +100,7 @@ Three things differ from a run on a dev machine:
   why an agent's first event comes about 1.6 seconds after the sandbox is asked for.
 - **Codex's own inner sandbox is turned off.** It cannot start inside a Vercel Sandbox, and Codex then refuses
   every command. The Vercel Sandbox is the isolation.
-- **A run has a limit**, 240 seconds by default (`SANDBOX_RUN_LIMIT_SECONDS`): a hosted API cannot hold a request
+- **A run has a limit**, 240 seconds: a hosted API cannot hold a request
   for ever. A run that reaches it fails with a sentence saying so.
 
 Both API keys are required: a sandbox has no login. Outside Vercel a sandbox token is needed too, in
@@ -143,21 +143,9 @@ pins, so that can only happen on an upgrade: then run the live test, and make th
 
 ### Configuration and secrets
 
-Read from the environment, and from a `.env` file at the root of the repository when there is one (see
-`.env.example`). The server checks it at startup and stops with the name of any variable that is wrong.
+Read from the environment, and from a `.env` file at the root of the repository when there is one. The server checks it at startup and stops with the name of any variable that is wrong.
 
-| Variable                    | Default                 | Meaning                                                                                              |
-| --------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY`         | not set                 | Secret. Without it, Claude Code uses the login on the machine.                                       |
-| `OPENAI_API_KEY`            | not set                 | Secret. Without it, Codex uses the login on the machine.                                             |
-| `CLAUDE_CODE_MODEL`         | `haiku`                 | The model Claude Code runs on                                                                        |
-| `CODEX_MODEL`               | `gpt-6-luna`            | The model Codex runs on                                                                              |
-| `TASK_CHECK_MODEL`          | `claude-haiku-5-5`      | The model that checks a task before a run and reviews it after                                       |
-| `AGENT_RUNTIME`             | `local`                 | `local`, `sandbox` (the default on Vercel) or `recorded`                                             |
-| `SANDBOX_RUN_LIMIT_SECONDS` | `240`                   | In a sandbox, the longest a run may take                                                             |
-| `PORT`                      | `3001`                  | The port of the API                                                                                  |
-| `API_URL`                   | `http://localhost:3001` | Read by the web app: where it forwards `/rpc`. Not sent to the browser.                              |
-| `DEMO_PASSWORD`             | not set                 | Secret, 8 characters or more. The one password of the app, checked by the API. Required when hosted. |
+Every variable, its default and what it does are listed in `.env.example`, which is the file to copy.
 
 A key is given to its own agent only. Each agent's process starts without the other provider's variables, and
 without any credential variable left in the server's environment: credentials reach an agent through this

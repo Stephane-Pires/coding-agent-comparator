@@ -14,6 +14,12 @@ import type { Runtime } from '../container.ts';
  * Nothing this file imports loads an agent's SDK, and it must stay so: a hosted API is a function of 250 MB at
  * most, and the two agents weigh 700 MB. That is why the agents' descriptions come from `/command-line`.
  */
+/**
+ * The longest a run may take. A hosted API is a function that Vercel stops at 300 seconds: the run is ended first,
+ * with a sentence that says so, and its sandbox stopped.
+ */
+const RUN_LIMIT_MS = 240_000;
+
 export function hostedRuntime(config: Config): Runtime {
   const { model, apiKey } = config.taskCheck;
   // `readConfig` refuses the sandbox runtime without both keys: this only tells the compiler so.
@@ -24,7 +30,7 @@ export function hostedRuntime(config: Config): Runtime {
         'claude-code': claudeCodeCommandLine(config.claudeCode),
         codex: codexCommandLine(config.codex),
       },
-      { runLimitMs: config.sandboxRunLimitMs },
+      { runLimitMs: RUN_LIMIT_MS },
     ),
     ...anthropicQuestions({ model, apiKey }),
   };

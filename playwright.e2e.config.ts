@@ -51,8 +51,8 @@ export default defineConfig({
         PORT: API_PORT,
         AGENT_RUNTIME: runtime,
         DEMO_PASSWORD: PASSWORD,
-        // How far apart a recorded agent's steps are: quick for a check, slow enough to read for a person.
-        RECORDED_PACE_MS: filmed ? '700' : '60',
+        // How far apart a recorded agent's steps are, for a person watching the film: slow enough to read.
+        ...(filmed ? { RECORDED_PACE_MS: '700' } : {}),
       },
       url: `${API}/openapi.json`,
       reuseExistingServer: false,

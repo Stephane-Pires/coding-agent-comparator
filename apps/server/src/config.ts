@@ -6,17 +6,21 @@ const blankAsUnset = (value: unknown) =>
   typeof value === 'string' && value.trim() === '' ? undefined : value;
 const optional = <T extends z.ZodType>(schema: T) => z.preprocess(blankAsUnset, schema.optional());
 
+/**
+ * The model that asks the two questions about a task. Its full name, which both routes accept: the API does not
+ * know the short ones. A small model: the questions are yes-or-no judgements on a few lines.
+ */
+const QUESTIONS_MODEL = 'claude-haiku-5-5';
+
 const Environment = z.object({
   ANTHROPIC_API_KEY: optional(z.string()),
   OPENAI_API_KEY: optional(z.string()),
   CLAUDE_CODE_MODEL: optional(z.string()).default('haiku'),
   CODEX_MODEL: optional(z.string()).default('gpt-6-luna'),
-  TASK_CHECK_MODEL: optional(z.string()).default('claude-haiku-5-5'),
   AGENT_RUNTIME: optional(z.enum(['local', 'recorded', 'sandbox'])),
   DEMO_PASSWORD: optional(z.string().min(8).max(200)),
   /** Set by Vercel on everything it runs. */
   VERCEL: optional(z.string()),
-  SANDBOX_RUN_LIMIT_SECONDS: optional(z.coerce.number().int().min(10)).default(240),
   RECORDED_PACE_MS: optional(z.coerce.number().int().min(0)).default(60),
   PORT: optional(z.coerce.number().int().min(1).max(65_535)).default(3001),
 });
@@ -32,8 +36,6 @@ export interface Config {
    * Sandbox. `recorded`: recordings of real runs, with no key and no login.
    */
   readonly runtime: 'local' | 'recorded' | 'sandbox';
-  /** In the `sandbox` runtime, the longest a run may take, in milliseconds. */
-  readonly sandboxRunLimitMs: number;
   /** In the `recorded` runtime, the milliseconds between two steps of an agent. */
   readonly recordedPaceMs: number;
   readonly claudeCode: { readonly model: string; readonly apiKey: string | undefined };
@@ -71,10 +73,9 @@ export function readConfig(env: Readonly<Record<string, string | undefined>>): R
     password: data.DEMO_PASSWORD,
     hosted: data.VERCEL !== undefined,
     runtime,
-    sandboxRunLimitMs: data.SANDBOX_RUN_LIMIT_SECONDS * 1000,
     recordedPaceMs: data.RECORDED_PACE_MS,
     claudeCode: { model: data.CLAUDE_CODE_MODEL, apiKey: data.ANTHROPIC_API_KEY },
     codex: { model: data.CODEX_MODEL, apiKey: data.OPENAI_API_KEY },
-    taskCheck: { model: data.TASK_CHECK_MODEL, apiKey: data.ANTHROPIC_API_KEY },
+    taskCheck: { model: QUESTIONS_MODEL, apiKey: data.ANTHROPIC_API_KEY },
   });
 }
