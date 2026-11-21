@@ -129,7 +129,7 @@ export function sandboxRuntime(
       } catch (error) {
         if (limit.aborted && !signal.aborted)
           throw new Error(
-            `The run was stopped after ${Math.round(runLimitMs / 1000)} seconds: a hosted run cannot last longer.`,
+            `The run was stopped after ${Math.round(runLimitMs / 1000)} seconds, the longest a run may last on the hosted app. Send a smaller task, or run the app on your own machine, where a run has no limit.`,
             { cause: error },
           );
         throw error;
