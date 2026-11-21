@@ -5,6 +5,7 @@
 // screen readers, icons take the text's colour. Removed: `FileTreeActions`, `FileTreeIcon`, `FileTreeName`, the
 // per-row contexts and the custom file icon.
 
+import { cn } from 'cn';
 import { ChevronRightIcon, FileIcon, FolderIcon, FolderOpenIcon } from 'lucide-react';
 import { createContext, useContext, useMemo, type HTMLAttributes, type KeyboardEvent } from 'react';
 
@@ -13,7 +14,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@comparator/ui/components/ui/collapsible';
-import { cn } from '@comparator/ui/lib/utils';
 
 interface FileTreeContextType {
   expanded: ReadonlySet<string>;

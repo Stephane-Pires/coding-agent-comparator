@@ -3,7 +3,6 @@
    only for what the user just did. Pink has one job: what you can act on, and where you are (the main action, links,
    the selected item, the focus ring). Red stays for errors, green for a run that succeeded. */
 @import 'tailwindcss';
-@import 'tw-animate-css';
 /* Inter, stored with the app: its latin file only (48 KB). Other scripts use the fallback. */
 @font-face {
   font-family: 'Inter Variable';
@@ -21,7 +20,6 @@
 @source './';
 /* The markdown renderer of agent messages (Streamdown) styles itself with Tailwind classes: scan them too. */
 @source '../node_modules/streamdown/dist/*.js';
-@source '../node_modules/@streamdown/code/dist/*.js';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -40,7 +38,6 @@
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   /* What you asked (the task of a comparison): white text on a deep pink, 5.2:1. The same in both themes: the
@@ -50,8 +47,6 @@
   /* Pink fill: the main action (Send); white text on it, 5.2:1. */
   --primary: oklch(0.56 0.2 345);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.5 0 0); /* 4.5:1 on --muted too (WCAG AA) */
   --accent: oklch(0.97 0 0);
@@ -74,14 +69,11 @@
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
   /* Pink fill with black text on it, 8.6:1. */
   --primary: oklch(0.76 0.15 345);
   --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
@@ -103,15 +95,12 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-asked: var(--asked);
   --color-asked-foreground: var(--asked-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
@@ -126,19 +115,14 @@
   /* Type: Inter, the system font as fallback (sized to match). Six sizes only: xs 12, sm 14, base 16, lg 18, xl 20,
      2xl 24 (Tailwind's own steps). */
   --font-sans: 'Inter Variable', 'Inter Fallback', ui-sans-serif, system-ui, sans-serif;
-  /* Motion (docs/design/look-and-feel.md): colour changes, something appearing or leaving, something moving. */
-  --ease-out: cubic-bezier(0.2, 0, 0, 1);
-  --ease-in: cubic-bezier(0.4, 0, 1, 1);
 }
 
 /* Layout (docs/design/look-and-feel.md, Layout). Spacing uses Tailwind's own steps 1 2 3 4 6 8 12 (4 to 48 px): no
-   token needed. What is ours: the widths at which the column grid changes, read on the space the content gets
-   (container queries), so an agent's column lays itself out on the width it really has.
-   A 640 px window minus its two 24 px gutters gives 592 px (37rem); a 1024 px one, 976 px (61rem). They give the
-   container variants `@cols-8:` / `@cols-12:` and their `@max-cols-8:` / `@max-cols-12:` counterparts. */
+   token needed. What is ours: the width at which the runs of a comparison sit side by side, read on the space the
+   content gets (a container query). A 640 px window minus its two 24 px gutters gives 592 px (37rem): the variant
+   `@cols-8:`, and `@max-cols-8:` below it. */
 @theme {
   --container-cols-8: 37rem;
-  --container-cols-12: 61rem;
 }
 
 /* The page frame: one width and one gutter for the header and the content (16 px on phone, 24 px from 640 px). */
@@ -152,28 +136,12 @@
   }
 }
 
-/* The column grid of a page: 4 columns, then 8, then 12, on the width its container gives it (an ancestor marked
-   `@container`). Areas span columns with `col-span-*`, `@cols-8:col-span-*`, `@cols-12:col-span-*`. */
-@utility page-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: --spacing(4);
-  @container (width >= 37rem) {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-    gap: --spacing(6);
-  }
-  @container (width >= 61rem) {
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-  }
-}
-
 /* Motion durations; none at all with reduced motion. */
 :root {
   --duration-fast: 120ms;
-  --duration-base: 180ms;
   --duration-slow: 240ms;
 }
-/* The empty page's picture: a ski track drawing itself (components/twin-tracks.tsx). */
+/* The empty page's picture: a ski track drawing itself (components/empty-comparison.tsx). */
 @keyframes draw-track {
   to {
     stroke-dashoffset: 0;
@@ -293,11 +261,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    --duration-fast: 0ms;
-    --duration-base: 0ms;
-    --duration-slow: 0ms;
-  }
   *,
   *::before,
   *::after {
@@ -313,11 +276,6 @@
   }
   body {
     @apply bg-background text-foreground;
-  }
-  /* Numbers that are compared line up (durations, tokens, cost): `tabular-nums` on those elements, or
-     `data-numeric`. Never on whole tables: Inter's tabular setting also widens hyphens. */
-  [data-numeric] {
-    font-variant-numeric: tabular-nums;
   }
   /* Focus is always visible (WCAG 2.4.7). */
   a:focus-visible,

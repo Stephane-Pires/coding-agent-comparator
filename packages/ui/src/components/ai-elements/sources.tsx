@@ -1,7 +1,8 @@
 'use client';
 
-// From the AI Elements registry. Changed: pink as text uses the brand token.
+// From the AI Elements registry. Changed: pink as text uses the brand token; only what the comparator shows is kept.
 
+import { cn } from 'cn';
 import { BookIcon, ChevronDownIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
 
@@ -10,7 +11,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@comparator/ui/components/ui/collapsible';
-import { cn } from '@comparator/ui/lib/utils';
 
 export type SourcesProps = ComponentProps<'div'>;
 
@@ -22,39 +22,24 @@ export type SourcesTriggerProps = ComponentProps<typeof CollapsibleTrigger> & {
   count: number;
 };
 
-export const SourcesTrigger = ({ className, count, children, ...props }: SourcesTriggerProps) => (
+export const SourcesTrigger = ({ className, count, ...props }: SourcesTriggerProps) => (
   <CollapsibleTrigger className={cn('flex items-center gap-2', className)} {...props}>
-    {children ?? (
-      <>
-        <p className="font-medium">Used {count} sources</p>
-        <ChevronDownIcon className="h-4 w-4" />
-      </>
-    )}
+    <p className="font-medium">Used {count} sources</p>
+    <ChevronDownIcon className="h-4 w-4" />
   </CollapsibleTrigger>
 );
 
 export type SourcesContentProps = ComponentProps<typeof CollapsibleContent>;
 
 export const SourcesContent = ({ className, ...props }: SourcesContentProps) => (
-  <CollapsibleContent
-    className={cn(
-      'mt-3 flex w-fit flex-col gap-2',
-      'data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 outline-none data-[state=closed]:animate-out data-[state=open]:animate-in',
-      className,
-    )}
-    {...props}
-  />
+  <CollapsibleContent className={cn('mt-3 flex w-fit flex-col gap-2 outline-none', className)} {...props} />
 );
 
 export type SourceProps = ComponentProps<'a'>;
 
-export const Source = ({ href, title, children, ...props }: SourceProps) => (
+export const Source = ({ href, title, ...props }: SourceProps) => (
   <a className="flex items-center gap-2" href={href} rel="noreferrer" target="_blank" {...props}>
-    {children ?? (
-      <>
-        <BookIcon className="h-4 w-4" />
-        <span className="block font-medium">{title}</span>
-      </>
-    )}
+    <BookIcon className="h-4 w-4" />
+    <span className="block font-medium">{title}</span>
   </a>
 );

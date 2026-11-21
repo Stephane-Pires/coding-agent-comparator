@@ -2,9 +2,7 @@
 node_modules/
 
 # Build output
-dist/
 .next/
-out/
 storybook-static/
 *.tsbuildinfo
 
@@ -14,10 +12,8 @@ storybook-static/
 !.env.example
 
 # Tests
-coverage/
 test-results/
 e2e-videos/
-playwright-report/
 
 # Made by the pre-commit tooling on install
 .vite-hooks/_/

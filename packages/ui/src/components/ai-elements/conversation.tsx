@@ -1,13 +1,12 @@
 'use client';
 
-// From the AI Elements registry. Left out of the registry version: the download button.
+import { cn } from 'cn';
+// From the AI Elements registry. Left out of the registry version: the download button and the empty state.
 import { ArrowDownIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
-import { useCallback } from 'react';
 import { StickToBottom, useStickToBottomContext } from 'use-stick-to-bottom';
 
 import { Button } from '@comparator/ui/components/ui/button';
-import { cn } from '@comparator/ui/lib/utils';
 
 export type ConversationProps = ComponentProps<typeof StickToBottom>;
 
@@ -27,44 +26,10 @@ export const ConversationContent = ({ className, ...props }: ConversationContent
   <StickToBottom.Content className={cn('flex flex-col gap-8 p-4', className)} {...props} />
 );
 
-export type ConversationEmptyStateProps = ComponentProps<'div'> & {
-  title?: string;
-  description?: string;
-  icon?: React.ReactNode;
-};
-
-export const ConversationEmptyState = ({
-  className,
-  title = 'No messages yet',
-  description = 'Start a conversation to see messages here',
-  icon,
-  children,
-  ...props
-}: ConversationEmptyStateProps) => (
-  <div
-    className={cn('flex size-full flex-col items-center justify-center gap-3 p-8 text-center', className)}
-    {...props}
-  >
-    {children ?? (
-      <>
-        {icon && <div className="text-muted-foreground">{icon}</div>}
-        <div className="space-y-1">
-          <h3 className="font-medium text-sm">{title}</h3>
-          {description && <p className="text-muted-foreground text-sm">{description}</p>}
-        </div>
-      </>
-    )}
-  </div>
-);
-
 export type ConversationScrollButtonProps = ComponentProps<typeof Button>;
 
 export const ConversationScrollButton = ({ className, ...props }: ConversationScrollButtonProps) => {
   const { isAtBottom, scrollToBottom } = useStickToBottomContext();
-
-  const handleScrollToBottom = useCallback(() => {
-    scrollToBottom();
-  }, [scrollToBottom]);
 
   return (
     !isAtBottom && (
@@ -73,7 +38,7 @@ export const ConversationScrollButton = ({ className, ...props }: ConversationSc
           'absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full dark:bg-background dark:hover:bg-muted',
           className,
         )}
-        onClick={handleScrollToBottom}
+        onClick={() => void scrollToBottom()}
         size="icon"
         type="button"
         variant="outline"

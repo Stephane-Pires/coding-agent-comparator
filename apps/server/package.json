@@ -5,8 +5,7 @@
   "type": "module",
   "description": "The API: composition root, oRPC on Hono, OpenAPI on Scalar.",
   "scripts": {
-    "dev": "node --watch src/main.ts",
-    "start": "node src/main.ts"
+    "dev": "node --watch src/main.ts"
   },
   "dependencies": {
     "@comparator/application": "workspace:*",

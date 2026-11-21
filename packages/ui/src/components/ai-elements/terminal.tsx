@@ -3,10 +3,9 @@
 // From the AI Elements registry, reduced to the output panel: text with its ANSI colours, scrolled to the end as
 // it grows. Left out of the registry version: the header, the title, and the copy and clear buttons.
 import AnsiModule from 'ansi-to-react';
+import { cn } from 'cn';
 import type { HTMLAttributes } from 'react';
 import { useEffect, useRef } from 'react';
-
-import { cn } from '@comparator/ui/lib/utils';
 
 // The library is CommonJS: depending on the bundler, its default export arrives as the component or as the module.
 const Ansi: typeof AnsiModule =

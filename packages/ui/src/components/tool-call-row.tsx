@@ -1,5 +1,7 @@
 'use client';
 
+import { cn } from 'cn';
+
 import type { Tool, ToolCall } from '@comparator/contracts';
 import { MessageResponse } from '@comparator/ui/components/ai-elements/message';
 import {
@@ -15,7 +17,6 @@ import {
   CollapsibleTrigger,
 } from '@comparator/ui/components/ui/collapsible';
 import { ICONS } from '@comparator/ui/icons';
-import { cn } from '@comparator/ui/lib/utils';
 
 /** The word and the tone of each status. Colour is never the only signal: the icon and the word say it too. */
 export const STATUSES: Record<ToolCall['status'], { label: string; tone: string }> = {

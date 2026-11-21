@@ -1,6 +1,7 @@
+import { cn } from 'cn';
+
 import type { RunStatus } from '@comparator/contracts';
 import { ICONS } from '@comparator/ui/icons';
-import { cn } from '@comparator/ui/lib/utils';
 
 /**
  * The word and the tone of each status. The words are those of a run on a ski course (docs/design/look-and-feel.md,
