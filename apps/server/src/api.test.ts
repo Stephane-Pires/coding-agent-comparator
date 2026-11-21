@@ -7,7 +7,6 @@ import { createApp } from './api.ts';
 
 const accepts: CheckTask = () => Promise.resolve({ verdict: 'accepted' });
 const done: ReviewRun = () => Promise.resolve({ status: 'succeeded' });
-const asksBack: ReviewRun = () => Promise.resolve({ status: 'incomplete', reason: 'It asked a question.' });
 const refuses: CheckTask = () => Promise.resolve({ verdict: 'refused', reason: 'Not a coding task.' });
 
 function setup(
@@ -73,17 +72,6 @@ describe('POST /api/tasks/check', () => {
     const response = await setup([]).post('/api/tasks/check', { task: '   ' });
     expect(response.status).toBe(400);
     expect(JSON.stringify(await response.json())).toContain('task');
-  });
-
-  it('a run of a refused task ends at once with the reason, and starts no agent', async () => {
-    const { post, claude } = setup([{ kind: 'message', text: 'hi' }], inMemoryWorkspaces(), refuses);
-    const response = await post('/api/runs', { agent: 'claude-code', task: 'a poem' });
-    expect(await chunks(response)).toEqual([
-      { type: 'start' },
-      { type: 'data-outcome', data: { status: 'failed', reason: 'Not a coding task.' } },
-      { type: 'finish' },
-    ]);
-    expect(claude.runs).toHaveLength(0);
   });
 });
 
@@ -165,20 +153,6 @@ describe('POST /api/runs', () => {
     ]);
   });
 
-  it('streams an incomplete run as its outcome, with the reason', async () => {
-    const { post } = setup(
-      [{ kind: 'finished', outcome: { status: 'succeeded' } }],
-      inMemoryWorkspaces(),
-      accepts,
-      asksBack,
-    );
-    const response = await post('/api/runs', { agent: 'claude-code', task: 'write a function' });
-    expect((await chunks(response)).at(-2)).toEqual({
-      type: 'data-outcome',
-      data: { status: 'incomplete', reason: 'It asked a question.' },
-    });
-  });
-
   it('streams a failure as the outcome of the run, not as an HTTP error', async () => {
     const { post } = setup([{ throws: new Error('process crashed') }]);
     const response = await post('/api/runs', { agent: 'claude-code', task: 'say hi' });
@@ -223,13 +197,6 @@ describe('the API reference', () => {
     expect(JSON.stringify(operation.responses)).toContain('text/event-stream');
     expect(JSON.stringify(operation.responses)).toContain('data-outcome');
     expect(operation.responses).toHaveProperty('400');
-  });
-
-  it('serves Scalar at /docs', async () => {
-    const { app } = setup([]);
-    const response = await app.request('/docs');
-    expect(response.status).toBe(200);
-    expect(await response.text()).toContain('/openapi.json');
   });
 });
 

@@ -8,7 +8,6 @@ import type { AgentEvent, ToolCall } from '@comparator/domain';
 
 import { translate, unwrapCommand } from './translate.ts';
 
-/** A recording of a real run (docs/spike-findings.md). */
 const WORKSPACE = '/workspace';
 /** A recording of a real run, its temporary folder renamed to `WORKSPACE`. */
 function recorded(name: string): ThreadEvent[] {

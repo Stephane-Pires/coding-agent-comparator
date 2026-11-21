@@ -35,16 +35,6 @@ export const CommandDone: Story = {
   },
 };
 
-export const CommandFailed: Story = {
-  args: {
-    call: call({
-      tool: { type: 'command', command: "rg --files -g 'package.json'" },
-      status: 'failed',
-      output: 'zsh: command not found: rg',
-    }),
-  },
-};
-
 /** Codex often writes a file and runs it in one command: the row shows its first line, and opens to all of it. */
 export const CommandOnSeveralLines: Story = {
   args: {

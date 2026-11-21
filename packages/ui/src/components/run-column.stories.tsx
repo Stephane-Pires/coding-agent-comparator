@@ -79,21 +79,6 @@ export const Succeeded: Story = {
   },
 };
 
-/** The files the agent left show under what it said and did. */
-export const WithFiles: Story = {
-  args: {
-    agent: 'codex',
-    items: [
-      message('1', 'I will create the file, then run it.'),
-      command('c1', `cat > hello.mjs <<'EOF'\nconsole.log('hi');\nEOF\nnode hello.mjs`, 'hi\n'),
-    ],
-    files: [
-      { path: 'hello.mjs', content: "console.log('hi');\n", state: 'complete' },
-      { path: 'docs/notes.md', content: '# Notes\n', state: 'complete' },
-    ],
-  },
-};
-
 const SORT = `export function sort(values: number[]): number[] {
   // A copy, so the input is left as it was.
   const result = [...values];
