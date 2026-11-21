@@ -2,3 +2,8 @@ packages:
   - apps/*
   - packages/*
   - packages/connectors/*
+
+# esbuild's install script only checks its own binary, which the platform package already provides. Listed here so
+# that a first install does not end on a warning asking to approve it.
+ignoredBuiltDependencies:
+  - esbuild
