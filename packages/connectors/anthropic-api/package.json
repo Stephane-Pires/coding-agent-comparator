@@ -1,0 +1,16 @@
+{
+  "name": "@comparator/connector-anthropic-api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Asks the Anthropic API the two questions about a task: is it a coding task, and was it done.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.10.0",
+    "@comparator/application": "workspace:*",
+    "@comparator/domain": "workspace:*",
+    "zod": "^4.6.7"
+  }
+}

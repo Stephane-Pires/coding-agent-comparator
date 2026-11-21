@@ -1,6 +1,7 @@
-// Measures the run review on the labelled runs of fixtures/run-review.json: `pnpm eval:run-review [model]`.
+// Measures the run review on the labelled runs of fixtures/run-review.json:
+//   pnpm eval:run-review [api|claude-code]
 // It calls a real model once per run, so it is not part of `pnpm check`. Run it after any change to the
-// instructions (RUN_REVIEW_INSTRUCTIONS) or to the model.
+// instructions (RUN_REVIEW_INSTRUCTIONS), to the model, or to an adapter.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -8,8 +9,8 @@ import { z } from 'zod';
 
 import { Task } from '@comparator/domain';
 
-import { claudeCodeRunReviewer } from '../reviewer.ts';
 import { measure } from './measure.ts';
+import { route } from './route.ts';
 
 const Labelled = z.object({
   kind: z.string(),
@@ -20,13 +21,12 @@ const Labelled = z.object({
   toolCalls: z.number(),
 });
 
-const model = process.argv[2] ?? 'haiku';
-const path = join(import.meta.dirname, '../../../../../fixtures/run-review.json');
+const path = join(import.meta.dirname, '../../../../fixtures/run-review.json');
 const { runs } = z.object({ runs: z.array(Labelled) }).parse(JSON.parse(readFileSync(path, 'utf8')));
-const reviewer = claudeCodeRunReviewer({ model, apiKey: process.env['ANTHROPIC_API_KEY'] || undefined });
+const { name, model, reviewer } = route();
 
 await measure({
-  model,
+  model: `${model}, through ${name}`,
   cases: runs,
   title: ({ task, answer }) => `${task} | ${answer}`.replaceAll('\n', ' '),
   answer: async ({ task, answer, files, toolCalls }) => {

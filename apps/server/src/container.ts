@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { z } from 'zod';
 
 import { checkTask, reviewRun, startRun } from '@comparator/application';
+import { anthropicQuestions } from '@comparator/connector-anthropic-api';
 import {
   claudeCodeAgent,
   claudeCodeRunReviewer,
@@ -19,7 +20,22 @@ import type { Config } from './config.ts';
 /** The recordings of real runs that the `recorded` runtime replays (`pnpm fixtures:record` makes them). */
 export const RECORDINGS_FILE = join(import.meta.dirname, '../../../fixtures/recordings.json');
 
-/** The real agents on this machine, each in a temporary folder, and Claude Code for the two questions. */
+/**
+ * What answers the two questions about a task (is it a coding task, was it done): the same small model either
+ * way. With a key, the Anthropic API directly, in under a second. Without one, Claude Code on the machine's login,
+ * which takes the few seconds a process needs to start.
+ */
+export function questions(config: Config): Pick<RecordedRuntime, 'classifier' | 'reviewer'> {
+  const { model, apiKey } = config.taskCheck;
+  return apiKey === undefined
+    ? {
+        classifier: claudeCodeTaskClassifier({ model, apiKey }),
+        reviewer: claudeCodeRunReviewer({ model, apiKey }),
+      }
+    : anthropicQuestions({ model, apiKey });
+}
+
+/** The real agents on this machine, each in a temporary folder. */
 function localRuntime(config: Config): RecordedRuntime {
   return {
     agents: {
@@ -27,9 +43,7 @@ function localRuntime(config: Config): RecordedRuntime {
       codex: codexAgent(config.codex),
     },
     workspaces: localWorkspaces(),
-    // The same small model answers both questions: is the task a coding task, and was it done.
-    classifier: claudeCodeTaskClassifier(config.taskCheck),
-    reviewer: claudeCodeRunReviewer(config.taskCheck),
+    ...questions(config),
   };
 }
 

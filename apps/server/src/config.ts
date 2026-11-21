@@ -11,7 +11,7 @@ const Environment = z.object({
   OPENAI_API_KEY: optional(z.string()),
   CLAUDE_CODE_MODEL: optional(z.string()).default('haiku'),
   CODEX_MODEL: optional(z.string()).default('gpt-6-luna'),
-  TASK_CHECK_MODEL: optional(z.string()).default('haiku'),
+  TASK_CHECK_MODEL: optional(z.string()).default('claude-haiku-5-5'),
   AGENT_RUNTIME: optional(z.enum(['local', 'recorded'])).default('local'),
   RECORDED_PACE_MS: optional(z.coerce.number().int().min(0)).default(60),
   PORT: optional(z.coerce.number().int().min(1).max(65_535)).default(3001),

@@ -61,8 +61,9 @@ asks first (`/rpc/tasks/check`) and shows one refusal for the comparison; each r
 cannot be skipped by calling the API directly, and finds the verdict already given. A refused task creates no
 workspace and starts no agent.
 
-The question goes to Claude Code, with no tools, on the same credentials as the Claude Code agent. It takes about
-three seconds. If the model cannot be reached, the task is accepted: the check is a filter, not a lock. The rule and
+The question is asked one of two ways, to the same small model. With an Anthropic key, the API is called directly:
+one request, under a second. With no key, Claude Code asks it, with no tools, on the machine's login: about three
+seconds, the time a process takes to start. If the model cannot be reached, the task is accepted: the check is a filter, not a lock. The rule and
 the instructions are in the core (`verdictOf`, `TASK_CHECK_INSTRUCTIONS`); `pnpm eval:task-check` measures them on
 the labelled tasks of `fixtures/task-check.json`.
 
@@ -73,8 +74,8 @@ do. So when an agent stops cleanly, the API asks a model one more question: was 
 task, what the agent said, the paths of the files it left and how many tools it called, and never which agent it was.
 A run that did not do its task ends as **incomplete**, with one sentence saying what is missing.
 
-Like the task check, the question goes to Claude Code with no tools, on the model set by `TASK_CHECK_MODEL`, and takes
-about three seconds, which are not counted in the run's duration. If the model cannot be reached, the run counts as
+The question takes the same route as the task check, on the model set by `TASK_CHECK_MODEL`: under a second through
+the API, about three through Claude Code. That time is not counted in the run's duration. If the model cannot be reached, the run counts as
 finished. `pnpm eval:run-review` measures the instructions on the labelled runs of `fixtures/run-review.json`.
 
 ### Recorded runs, and the end-to-end test
@@ -120,7 +121,7 @@ Read from the environment, and from a `.env` file at the root of the repository 
 | `OPENAI_API_KEY`    | not set                 | Secret. Without it, Codex uses the login on the machine.                |
 | `CLAUDE_CODE_MODEL` | `haiku`                 | The model Claude Code runs on                                           |
 | `CODEX_MODEL`       | `gpt-6-luna`            | The model Codex runs on                                                 |
-| `TASK_CHECK_MODEL`  | `haiku`                 | The model that checks a task before a run and reviews it after          |
+| `TASK_CHECK_MODEL`  | `claude-haiku-5-5`      | The model that checks a task before a run and reviews it after          |
 | `AGENT_RUNTIME`     | `local`                 | `local`: the real agents. `recorded`: recordings of real runs, no key   |
 | `PORT`              | `3001`                  | The port of the API                                                     |
 | `API_URL`           | `http://localhost:3001` | Read by the web app: where it forwards `/rpc`. Not sent to the browser. |

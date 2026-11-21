@@ -10,7 +10,7 @@ describe('readConfig', () => {
       recordedPaceMs: 60,
       claudeCode: { model: 'haiku', apiKey: undefined },
       codex: { model: 'gpt-6-luna', apiKey: undefined },
-      taskCheck: { model: 'haiku', apiKey: undefined },
+      taskCheck: { model: 'claude-haiku-5-5', apiKey: undefined },
     });
   });
 
@@ -28,7 +28,7 @@ describe('readConfig', () => {
       recordedPaceMs: 60,
       claudeCode: { model: 'sonnet', apiKey: 'key-a' },
       codex: { model: 'other', apiKey: 'key-o' },
-      taskCheck: { model: 'haiku', apiKey: 'key-a' },
+      taskCheck: { model: 'claude-haiku-5-5', apiKey: 'key-a' },
     });
   });
 

@@ -27,6 +27,7 @@ const SERVER_ONLY = [
   '@hono/',
   '@orpc/server',
   '@anthropic-ai/claude-agent-sdk',
+  '@anthropic-ai/sdk',
   '@openai/codex-sdk',
   '@vercel/sandbox',
 ];
@@ -71,6 +72,7 @@ export const RULES: Readonly<Record<string, PackageRule>> = {
   },
   '@comparator/connector-claude-code': adapter('packages/connectors/claude-code'),
   '@comparator/connector-codex': adapter('packages/connectors/codex'),
+  '@comparator/connector-anthropic-api': adapter('packages/connectors/anthropic-api'),
   '@comparator/workspace-local': adapter('packages/workspace-local'),
   '@comparator/runtime-recorded': adapter('packages/runtime-recorded'),
   // It also imports itself by name: the form shadcn's generated components use.

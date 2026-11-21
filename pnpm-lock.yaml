@@ -29,6 +29,9 @@ importers:
       '@comparator/application':
         specifier: workspace:*
         version: link:../../packages/application
+      '@comparator/connector-anthropic-api':
+        specifier: workspace:*
+        version: link:../../packages/connectors/anthropic-api
       '@comparator/connector-claude-code':
         specifier: workspace:*
         version: link:../../packages/connectors/claude-code
@@ -130,6 +133,21 @@ importers:
         specifier: ^8.2.0
         version: 8.2.0
 
+  packages/connectors/anthropic-api:
+    dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^1.10.0
+        version: 1.10.0(zod@4.6.7)
+      '@comparator/application':
+        specifier: workspace:*
+        version: link:../../application
+      '@comparator/domain':
+        specifier: workspace:*
+        version: link:../../domain
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+
   packages/connectors/claude-code:
     dependencies:
       '@anthropic-ai/claude-agent-sdk':
@@ -141,9 +159,6 @@ importers:
       '@comparator/domain':
         specifier: workspace:*
         version: link:../../domain
-      zod:
-        specifier: ^4.6.7
-        version: 4.6.7
 
   packages/connectors/codex:
     dependencies:

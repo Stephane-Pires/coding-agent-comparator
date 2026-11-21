@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@comparator/application": "workspace:*",
+    "@comparator/connector-anthropic-api": "workspace:*",
     "@comparator/connector-claude-code": "workspace:*",
     "@comparator/connector-codex": "workspace:*",
     "@comparator/contracts": "workspace:*",
