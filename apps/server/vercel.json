@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "src/index.ts": {
+      "includeFiles": "../../packages/{domain,application,contracts,runtime-sandbox,connectors/*}/src/**/*.ts"
+    }
+  }
+}

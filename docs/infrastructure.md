@@ -247,6 +247,10 @@ API keys, and it has a public address of its own, so the lock is there and nowhe
 | Password             | None                                              | Required                                          |
 | Longest run          | No limit                                          | 240 seconds, under the 300 a function may last    |
 
+Vercel compiles the API to JavaScript, but our packages name a TypeScript file as their entry, which Node runs as
+it is. So `apps/server/vercel.json` keeps the packages' TypeScript sources in the function; without it the function
+builds and then fails at its first request, unable to find `@comparator/contracts/src/index.ts`.
+
 The hosted entry must never load an agent's SDK: a function holds 250 MB at most, and the agents weigh 700 MB.
 `tooling/hosted-entry.test.ts` follows every import from `src/index.ts` and fails if one leads to an SDK.
 
