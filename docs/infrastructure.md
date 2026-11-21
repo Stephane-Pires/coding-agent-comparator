@@ -112,7 +112,7 @@ With `AGENT_RUNTIME=recorded` the API replays recordings of real runs (`fixtures
 agents, their workspaces and the two questions asked to a model. Nothing calls a provider, so it needs no key and no
 login, and it gives the same answer whatever the task. Everything above the ports is the real code.
 
-One browser test uses both runtimes:
+One browser test runs on each runtime:
 
 | Command                 | Runs on                            | Guards                                            |
 | ----------------------- | ---------------------------------- | ------------------------------------------------- |
@@ -126,7 +126,7 @@ to film the real agents the same way.
 
 A recording cannot show that an agent changed. An agent's binary comes with its SDK, at the version the lockfile
 pins, so that can only happen on an upgrade: then run the live test, and make the recordings again with
-`pnpm fixtures:record`. Both tests start their own API and a production build of the web app, on ports 3011 and
+`pnpm fixtures:record`. Every way of running the test starts its own API and a production build of the web app, on ports 3011 and
 3110 (`E2E_API_PORT` and `E2E_WEB_PORT` change them), beside a dev server if one is running.
 
 ### Routes

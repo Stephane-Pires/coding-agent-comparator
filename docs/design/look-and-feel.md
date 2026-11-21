@@ -53,9 +53,9 @@ Inter, stored with the app: its latin file only (48 KB). While it loads, Arial r
 
 Six sizes, Tailwind's own steps: `text-xs` 12 (counts, captions), `text-sm` 14 (buttons, fields, the events of a run:
 the working size), `text-base` 16 (reading text: what an agent says), `text-lg` 18 (section headings), `text-xl` 20
-(card and dialog titles), `text-2xl` 24 (page titles, `font-semibold tracking-tight`).
+and `text-2xl` 24 (the headings an agent writes in its answers, as the markdown renderer draws them).
 
-Numbers that are compared line up: `tabular-nums` (or `data-numeric`) on durations, token counts and costs, never on
+Numbers that are compared line up: `tabular-nums` on durations, token counts and costs, never on
 whole tables: Inter's tabular setting also widens hyphens.
 
 ## Icons
@@ -100,7 +100,6 @@ A run in progress also shows a spinner, and text appears as the agent writes it:
 | Trigger                    | What moves                                                        | Time                                 |
 | -------------------------- | ----------------------------------------------------------------- | ------------------------------------ |
 | Hover, press               | Colour                                                            | 120 ms (`--duration-fast`)           |
-| Something leaves           | It fades                                                          | 180 ms (`--duration-base`, ease-in)  |
 | Something moves or arrives | It moves                                                          | 240 ms (`--duration-slow`, ease-out) |
 | A wrong password           | The padlock shakes once                                           | 320 ms                               |
 | The right password         | The padlock's shackle lifts, then the locker gives way to the app | 240 ms, then 240 ms                  |
@@ -113,9 +112,6 @@ Dialogs and menus keep their library's short defaults.
 Numbers counting up, bounces, ambient pulses, anything that loops with no work behind it. Nothing moves by being
 laid out again: a mark on a track is moved (`translate`), and the tracks sit above the runs, where nothing that
 arrives can push them.
-
-Tried and dropped: the slope picture moving into the comparison when the first task is sent. It blended a small
-picture into a wide block of text, two unlike things, and explained nothing.
 
 ### Reduced motion
 
@@ -150,8 +146,7 @@ already called it a "run"; the voice takes that word seriously, lightly, the way
 
 ## Layout
 
-In code: `packages/ui/src/styles.css` (the Tailwind configuration: `@theme` and the `page-frame` / `page-grid`
-utilities) and the check `tooling/layout-scale.test.ts`.
+In code: `packages/ui/src/styles.css` (the Tailwind configuration: `@theme` and the `page-frame` utility) and the check `tooling/layout-scale.test.ts`.
 
 ### Spacing: one scale, two kinds
 
@@ -177,17 +172,10 @@ either: a 2 px margin aligning an icon with the first line of its text (`mt-0.5`
 One container for the header and the content, the `page-frame` utility: `max-w-7xl` (1280 px), centred, gutter
 **16 px below 640 px, 24 px from 640 px**.
 
-### The column grid
+### Two runs side by side
 
-| Width       | Columns | Gap   |
-| ----------- | ------- | ----- |
-| < 640 px    | 4       | 16 px |
-| 640–1023 px | 8       | 24 px |
-| ≥ 1024 px   | 12      | 24 px |
-
-The `page-grid` utility. It reads the width its container gives it, not the window's (`@container` on an ancestor),
-so the columns change at a content width of 592 px (`@cols-8:`, 37rem) and 976 px (`@cols-12:`, 61rem). Areas span
-columns (`col-span-full @cols-12:col-span-6`); a component does not invent its own column widths for page structure.
+The runs of a comparison stand one under the other, then side by side once their block is 592 px wide (`@cols-8:`,
+37rem), with a gap of 16 px, then 24 px. The width read is the one the block gets (`@container`), not the window's.
 
 Components size on the space they are given (`@container`), not on the screen width: a run's column is narrow on a
 wide screen. Screen-width breakpoints (`sm:`, `md:`, `lg:`) stay for the page frame.

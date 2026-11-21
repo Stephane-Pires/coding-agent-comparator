@@ -2,7 +2,8 @@
 
 - Status: accepted (2026-11-19)
 
-Number 0002 is reserved for the storage decision (history in the browser), which comes with its own slice.
+There is no 0002: it was kept for a decision about storing past comparisons, which was dropped. The app stores
+nothing, on the server or in the browser.
 
 ## Context
 
@@ -35,8 +36,8 @@ documented, and the documentation must not drift from the code.
 - Adding an event kind is one change per layer: the domain schema, each connector's translator, the contract's chunk,
   the presenter. The type checker points at each place.
 - The web app never imports the domain. It sees the contract's types only (ADR 0001).
-- A failure reason is the agent's own text for now. Mapping reasons to actions the user can take belongs to the
-  error-states slice.
+- A failure reason is the agent's own text, except when a provider refused the app itself: the visitor is then told
+  it is a problem with the app, and the provider's words go to the server's log.
 
 ## Evidence
 

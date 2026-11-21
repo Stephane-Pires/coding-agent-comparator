@@ -12,8 +12,8 @@ The rules of a comparison should not change with any of that.
 ## Decision
 
 - `domain` (Zod schemas and pure rules) and `application` (use cases and the ports they need) form the core.
-- Each coding agent is its own driven-adapter package, `packages/connectors/<agent>`. The local workspace is one too,
-  `packages/workspace-local`. An adapter implements a port and depends on the core only.
+- Each coding agent is its own driven-adapter package, `packages/connectors/<agent>`. So are the workspaces and the
+  runtimes (`workspace-local`, `runtime-sandbox`, `runtime-recorded`) and the direct Anthropic API. An adapter implements a port and depends on the core only.
 - `apps/server` is the composition root of the API. It wires adapters to use cases and holds no rule of its own.
 - `contracts` holds the oRPC contract. Its DTOs are derived from the domain schemas.
 - Packages are layers, because the import rules need a package to be enforced. Features are vertical slices: inside a
@@ -22,18 +22,9 @@ The rules of a comparison should not change with any of that.
 - The UI is isolated: `apps/web` and `packages/ui` depend only on `@comparator/contracts` and `@comparator/ui`. They
   never import the domain, the server, an agent SDK or a Node built-in.
 
-| Package                                                  | May import (workspace)  | May import (external)                              |
-| -------------------------------------------------------- | ----------------------- | -------------------------------------------------- |
-| `@comparator/domain`                                     | nothing                 | `zod`, `neverthrow`                                |
-| `@comparator/application`                                | `domain`                | `neverthrow`                                       |
-| `@comparator/contracts`                                  | `domain`                | `zod`, `@orpc/contract`                            |
-| `@comparator/connector-*`, `@comparator/workspace-local` | `domain`, `application` | anything except `hono`, `@orpc/*`, `react`, `next` |
-| `@comparator/ui`                                         | `contracts`             | anything except server-only packages and `node:*`  |
-| `@comparator/web`                                        | `contracts`, `ui`       | anything except server-only packages and `node:*`  |
-| `@comparator/server`                                     | everything              | anything except `react`, `react-dom`, `next`       |
-
-Server-only packages: `hono`, `@hono/*`, `@orpc/server`, `@anthropic-ai/claude-agent-sdk`, `@openai/codex-sdk`,
-`@vercel/sandbox`.
+The rules, per package, are in `tooling/architecture.ts`; this record gives their reasons and does not copy them.
+In short: the domain imports only `zod` and `neverthrow`, the application only the domain, an adapter only the core,
+and the UI only the contract and itself. Only the server may load the HTTP server, the agents' SDKs or the sandbox.
 
 ## Enforcement
 
@@ -46,7 +37,8 @@ Server-only packages: `hono`, `@hono/*`, `@orpc/server`, `@anthropic-ai/claude-a
    for feedback in the editor. `import/no-cycle` forbids circular imports.
 
 Both run in `pnpm check` (format, lint, type-check, tests). Before every commit, `.vite-hooks/pre-commit` formats,
-lints and type-checks the staged files, then runs the tests. `pnpm install` enables the hook. There is no CI yet.
+lints and type-checks the staged files, then runs the tests. `pnpm install` enables the hook. There is no CI: the
+hook, and Vercel's build of each push, are the checks.
 
 Verified on 2026-11-19:
 
