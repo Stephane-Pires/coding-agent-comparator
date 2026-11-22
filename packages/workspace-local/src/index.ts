@@ -11,19 +11,19 @@ import type { WorkspaceFile } from '@comparator/domain';
 const SKIPPED_FOLDERS = new Set(['node_modules', '.git']);
 
 /** The path, relative to `root`, of every regular file under it. A link is not followed: it can point outside. */
-async function filePaths(root: string, folder = ''): Promise<string[]> {
+async function getFilePaths(root: string, folder = ''): Promise<string[]> {
   const entries = await readdir(join(root, folder), { withFileTypes: true });
   const found = await Promise.all(
     entries.map(async (entry) => {
       const path = folder === '' ? entry.name : `${folder}/${entry.name}`;
-      if (entry.isDirectory()) return SKIPPED_FOLDERS.has(entry.name) ? [] : filePaths(root, path);
+      if (entry.isDirectory()) return SKIPPED_FOLDERS.has(entry.name) ? [] : getFilePaths(root, path);
       return entry.isFile() ? [path] : [];
     }),
   );
   return found.flat();
 }
 
-async function read(root: string, path: string): Promise<WorkspaceFile> {
+async function readWorkspaceFile(root: string, path: string): Promise<WorkspaceFile> {
   const bytes = await readFile(join(root, path));
   // A zero byte does not occur in text.
   return bytes.includes(0)
@@ -35,7 +35,7 @@ async function read(root: string, path: string): Promise<WorkspaceFile> {
  * Workspaces on this machine: each one is a new empty folder under the OS temp directory. It is outside the
  * repository on purpose, so an agent does not pick up this project's files, instructions or Git history.
  */
-export function localWorkspaces(): WorkspaceProvider {
+export function createLocalWorkspaces(): WorkspaceProvider {
   return {
     create: () =>
       // The real path, with no symbolic link in it: the path an agent reports for its own files (on macOS the
@@ -49,9 +49,11 @@ export function localWorkspaces(): WorkspaceProvider {
       ).map((path) => ({ path })),
     async read(workspace) {
       try {
-        const paths = await filePaths(workspace.path);
+        const paths = await getFilePaths(workspace.path);
         // A file can vanish between being listed and being read: the agent is still at work.
-        const files = await Promise.allSettled(paths.toSorted().map((path) => read(workspace.path, path)));
+        const files = await Promise.allSettled(
+          paths.toSorted().map((path) => readWorkspaceFile(workspace.path, path)),
+        );
         return files.flatMap((file) => (file.status === 'fulfilled' ? [file.value] : []));
       } catch (error) {
         console.error(`Could not read the workspace ${workspace.path}:`, error);

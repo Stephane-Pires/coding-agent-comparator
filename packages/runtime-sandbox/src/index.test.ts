@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import { Task, type AgentEvent } from '@comparator/domain';
 
-import { overLimits, sandboxRuntime, type CommandLineAgent, type SandboxLike } from './index.ts';
+import { getLimitRefusal, createSandboxRuntime, type CommandLineAgent, type SandboxLike } from './index.ts';
 
 const task = Task.parse('write hello');
 /** An agent whose every printed line `{ "say": text }` is a message, and `{ "end": true }` its end. */
@@ -49,13 +49,13 @@ const NO_LIMITS = { atOnce: 100, perHour: 100 };
 const none = () => Promise.resolve([]);
 
 async function run(fake: ReturnType<typeof fakeSandbox>) {
-  const { agents, workspaces } = sandboxRuntime(
+  const { agents, workspaces } = createSandboxRuntime(
     { 'claude-code': cli, codex: cli },
     {
       runLimitMs: 60_000,
       limits: NO_LIMITS,
       createSandbox: () => Promise.resolve(fake.sandbox),
-      recentSandboxes: none,
+      listRecent: none,
     },
   );
   const workspace = (await workspaces.create())._unsafeUnwrap();
@@ -63,7 +63,7 @@ async function run(fake: ReturnType<typeof fakeSandbox>) {
   return { workspaces, workspace, events: agents['claude-code'].run(task, workspace, signal) };
 }
 
-describe('sandboxRuntime', () => {
+describe('createSandboxRuntime', () => {
   it('starts the agent by its command in the workspace of the sandbox, with only its own environment', async () => {
     const fake = fakeSandbox(['{"end":true}\n']);
     const { workspace, events } = await run(fake);
@@ -110,13 +110,13 @@ describe('sandboxRuntime', () => {
   });
 
   it('says so when a sandbox cannot be created', async () => {
-    const { workspaces } = sandboxRuntime(
+    const { workspaces } = createSandboxRuntime(
       { 'claude-code': cli, codex: cli },
       {
         runLimitMs: 60_000,
         limits: NO_LIMITS,
         createSandbox: () => Promise.reject(new Error('no token')),
-        recentSandboxes: none,
+        listRecent: none,
       },
     );
     expect((await workspaces.create())._unsafeUnwrapErr()).toEqual({
@@ -132,27 +132,27 @@ describe('the usage limits', () => {
   const minutesAgo = (minutes: number, status = 'stopped') => ({ createdAt: NOW - minutes * 60_000, status });
 
   it('lets a run start below both limits', () => {
-    expect(overLimits([minutesAgo(1, 'running'), minutesAgo(5)], LIMITS, NOW)).toBeUndefined();
+    expect(getLimitRefusal([minutesAgo(1, 'running'), minutesAgo(5)], LIMITS, NOW)).toBeUndefined();
   });
 
   it('refuses a run when as many are already running as allowed at once', () => {
-    const refusal = overLimits([minutesAgo(1, 'running'), minutesAgo(2, 'pending')], LIMITS, NOW);
+    const refusal = getLimitRefusal([minutesAgo(1, 'running'), minutesAgo(2, 'pending')], LIMITS, NOW);
     expect(refusal).toContain('already running 2 runs');
   });
 
   it('refuses a run over the hour, and says when a place frees up', () => {
-    const refusal = overLimits([minutesAgo(5), minutesAgo(20), minutesAgo(48)], LIMITS, NOW);
+    const refusal = getLimitRefusal([minutesAgo(5), minutesAgo(20), minutesAgo(48)], LIMITS, NOW);
     expect(refusal).toContain('limit of 3 runs an hour');
     expect(refusal).toContain('in 12 minutes');
   });
 
   it('counts only the runs of the last hour', () => {
-    expect(overLimits([minutesAgo(5), minutesAgo(20), minutesAgo(61)], LIMITS, NOW)).toBeUndefined();
+    expect(getLimitRefusal([minutesAgo(5), minutesAgo(20), minutesAgo(61)], LIMITS, NOW)).toBeUndefined();
   });
 
   it('refuses before any sandbox is created, with the reason', async () => {
     let created = 0;
-    const { workspaces } = sandboxRuntime(
+    const { workspaces } = createSandboxRuntime(
       { 'claude-code': cli, codex: cli },
       {
         runLimitMs: 60_000,
@@ -161,7 +161,7 @@ describe('the usage limits', () => {
           created += 1;
           return Promise.reject(new Error('not expected'));
         },
-        recentSandboxes: () => Promise.resolve([{ createdAt: Date.now(), status: 'running' }]),
+        listRecent: () => Promise.resolve([{ createdAt: Date.now(), status: 'running' }]),
       },
     );
     const error = (await workspaces.create())._unsafeUnwrapErr();
@@ -171,13 +171,13 @@ describe('the usage limits', () => {
 
   it('lets the run go ahead when the limits cannot be read', async () => {
     const fake = fakeSandbox([]);
-    const { workspaces } = sandboxRuntime(
+    const { workspaces } = createSandboxRuntime(
       { 'claude-code': cli, codex: cli },
       {
         runLimitMs: 60_000,
         limits: { atOnce: 1, perHour: 1 },
         createSandbox: () => Promise.resolve(fake.sandbox),
-        recentSandboxes: () => Promise.reject(new Error('Vercel did not answer')),
+        listRecent: () => Promise.reject(new Error('Vercel did not answer')),
       },
     );
     expect((await workspaces.create()).isOk()).toBe(true);

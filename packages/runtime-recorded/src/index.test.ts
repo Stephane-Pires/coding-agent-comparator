@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { checkTask, reviewRun, startRun } from '@comparator/application';
 import { Task, type RunEvent } from '@comparator/domain';
 
-import { recordedRuntime, type Recording } from './index.ts';
+import { createRecordedRuntime, type Recording } from './index.ts';
 
 const usage = { inputTokens: 10, cachedInputTokens: 4, outputTokens: 2, costUsd: null };
 const totals = (files: number) => ({ model: 'a-model', durationMs: 5000, usage, toolCalls: 1, files });
@@ -36,7 +36,7 @@ const RECORDINGS: Recording[] = [
 
 /** The real use cases, on the recorded runtime, with no pause between events. */
 function replay(task: string) {
-  const { agents, workspaces, classifier, reviewer } = recordedRuntime(RECORDINGS, { paceMs: 0 });
+  const { agents, workspaces, classifier, reviewer } = createRecordedRuntime(RECORDINGS, 0);
   const run = startRun({
     agents,
     workspaces,
@@ -53,7 +53,7 @@ const timeless = (events: readonly RunEvent[]) =>
     event.kind === 'metrics' ? { ...event, metrics: { ...event.metrics, durationMs: 0 } } : event,
   );
 
-describe('recordedRuntime', () => {
+describe('createRecordedRuntime', () => {
   it('replays a run as it was recorded: messages, tool calls, files, totals and outcome', async () => {
     expect(await replay('write hello')).toEqual(timeless(DONE));
   });

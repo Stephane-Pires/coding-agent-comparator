@@ -1,7 +1,7 @@
 import { createAnthropicQuestions } from '@comparator/connector-anthropic-api';
 import { createClaudeCodeCommandLine } from '@comparator/connector-claude-code/command-line';
 import { createCodexCommandLine } from '@comparator/connector-codex/command-line';
-import { sandboxRuntime } from '@comparator/runtime-sandbox';
+import { createSandboxRuntime } from '@comparator/runtime-sandbox';
 
 import type { Config } from '../config.ts';
 import type { Runtime } from '../container.ts';
@@ -31,7 +31,7 @@ export function hostedRuntime(config: Config): Runtime {
   // `readConfig` refuses the sandbox runtime without both keys: this only tells the compiler so.
   if (apiKey === undefined) throw new Error('The sandbox runtime needs ANTHROPIC_API_KEY.');
   return {
-    ...sandboxRuntime(
+    ...createSandboxRuntime(
       {
         'claude-code': createClaudeCodeCommandLine(config.claudeCode.model, config.claudeCode.apiKey),
         codex: createCodexCommandLine(config.codex.model, config.codex.apiKey),

@@ -24,11 +24,11 @@ export interface RecordedRuntime {
 }
 
 /** What an agent said in a run, as the run hands it to a reviewer: its messages, in order. */
-const answerOf = (events: readonly RunEvent[]): string =>
+const getAnswer = (events: readonly RunEvent[]): string =>
   events.flatMap((event) => (event.kind === 'message' ? [event.text] : [])).join('\n\n');
 
 /** Waits `ms`, or less if the run is aborted. */
-const pause = (ms: number, signal: AbortSignal) =>
+const wait = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve) => {
     const timer = setTimeout(resolve, ms);
     signal.addEventListener(
@@ -48,20 +48,17 @@ const pause = (ms: number, signal: AbortSignal) =>
  * A task is answered with its own recording; any other task gets the first recording that was accepted, so the app
  * always has something to show. Events are `paceMs` apart, so a run is seen arriving.
  */
-export function recordedRuntime(
-  recordings: readonly Recording[],
-  { paceMs }: { readonly paceMs: number },
-): RecordedRuntime {
-  const known = (task: string) => recordings.find((recording) => recording.task === task);
-  const played = (task: string) =>
-    known(task) ?? recordings.find((recording) => recording.verdict.verdict === 'accepted');
+export function createRecordedRuntime(recordings: readonly Recording[], paceMs: number): RecordedRuntime {
+  const findRecording = (task: string) => recordings.find((recording) => recording.task === task);
+  const findPlayedRecording = (task: string) =>
+    findRecording(task) ?? recordings.find((recording) => recording.verdict.verdict === 'accepted');
   // The files of each open workspace, by path: what a recorded agent "wrote" so far.
   const open = new Map<string, Map<string, WorkspaceFile>>();
   let created = 0;
 
-  const agent = (id: AgentId): CodingAgent => ({
+  const createAgent = (id: AgentId): CodingAgent => ({
     async *run(task, workspace, signal): AsyncGenerator<AgentEvent, void, void> {
-      const events = played(task)?.runs[id] ?? [];
+      const events = findPlayedRecording(task)?.runs[id] ?? [];
       const files = open.get(workspace.path);
       const metrics = events.flatMap((event) => (event.kind === 'metrics' ? [event.metrics] : [])).at(0);
       if (metrics?.model) yield { kind: 'model', model: metrics.model };
@@ -70,10 +67,12 @@ export function recordedRuntime(
         // A run observes these itself: the files by reading the workspace, the totals by counting.
         if (event.kind === 'file' || event.kind === 'metrics') continue;
         // The files recorded right after this event are in the workspace before the run looks for them.
-        for (let next = events[index + 1], ahead = 1; next?.kind === 'file'; next = events[index + ++ahead])
+        for (const next of events.slice(index + 1)) {
+          if (next.kind !== 'file') break;
           files?.set(next.file.path, next.file);
+        }
         if (event.kind !== 'finished') {
-          await pause(paceMs, signal);
+          await wait(paceMs, signal);
           yield event;
           continue;
         }
@@ -90,7 +89,7 @@ export function recordedRuntime(
   });
 
   return {
-    agents: { 'claude-code': agent('claude-code'), codex: agent('codex') },
+    agents: { 'claude-code': createAgent('claude-code'), codex: createAgent('codex') },
     workspaces: {
       create() {
         const path = `recorded-${++created}`;
@@ -108,7 +107,7 @@ export function recordedRuntime(
     },
     classifier: {
       assess(task) {
-        const verdict = known(task)?.verdict;
+        const verdict = findRecording(task)?.verdict;
         return Promise.resolve(
           verdict?.verdict === 'refused'
             ? { reason: verdict.reason, isCodingTask: false, hasFileResult: false }
@@ -119,7 +118,9 @@ export function recordedRuntime(
     reviewer: {
       // A reviewer is not told which agent it reads: the run is found by what the agent said.
       review({ task, answer }) {
-        const run = Object.values(played(task)?.runs ?? {}).find((events) => answerOf(events) === answer);
+        const run = Object.values(findPlayedRecording(task)?.runs ?? {}).find(
+          (events) => getAnswer(events) === answer,
+        );
         const outcome = run?.flatMap((event) => (event.kind === 'finished' ? [event.outcome] : [])).at(0);
         return Promise.resolve(
           outcome?.status === 'incomplete'

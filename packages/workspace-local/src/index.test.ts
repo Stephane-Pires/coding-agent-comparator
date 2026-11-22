@@ -4,11 +4,11 @@ import { join, relative, resolve } from 'node:path';
 
 import { describe, expect, it } from 'vite-plus/test';
 
-import { localWorkspaces } from './index.ts';
+import { createLocalWorkspaces } from './index.ts';
 
 describe('local workspaces', () => {
   it('creates an empty folder under the temp directory, outside the repository', async () => {
-    const workspaces = localWorkspaces();
+    const workspaces = createLocalWorkspaces();
     const workspace = (await workspaces.create())._unsafeUnwrap();
     expect(readdirSync(workspace.path)).toEqual([]);
     expect(relative(realpathSync(tmpdir()), workspace.path).startsWith('..')).toBe(false);
@@ -19,7 +19,7 @@ describe('local workspaces', () => {
   });
 
   it('never gives the same folder twice', async () => {
-    const workspaces = localWorkspaces();
+    const workspaces = createLocalWorkspaces();
     const first = (await workspaces.create())._unsafeUnwrap();
     const second = (await workspaces.create())._unsafeUnwrap();
     expect(first.path).not.toBe(second.path);
@@ -27,7 +27,7 @@ describe('local workspaces', () => {
   });
 
   it('reads the files an agent left, in folders too, by path', async () => {
-    const workspaces = localWorkspaces();
+    const workspaces = createLocalWorkspaces();
     const workspace = (await workspaces.create())._unsafeUnwrap();
     expect(await workspaces.read(workspace)).toEqual([]);
     mkdirSync(join(workspace.path, 'src/lib'), { recursive: true });
@@ -41,7 +41,7 @@ describe('local workspaces', () => {
   });
 
   it('lists a binary file without its content', async () => {
-    const workspaces = localWorkspaces();
+    const workspaces = createLocalWorkspaces();
     const workspace = (await workspaces.create())._unsafeUnwrap();
     writeFileSync(join(workspace.path, 'image.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, 2]));
     expect(await workspaces.read(workspace)).toEqual([{ path: 'image.png', content: '', state: 'binary' }]);
@@ -49,7 +49,7 @@ describe('local workspaces', () => {
   });
 
   it('leaves out installed dependencies, Git data, and links, which can point outside the workspace', async () => {
-    const workspaces = localWorkspaces();
+    const workspaces = createLocalWorkspaces();
     const workspace = (await workspaces.create())._unsafeUnwrap();
     for (const folder of ['node_modules/left-pad', '.git']) {
       mkdirSync(join(workspace.path, folder), { recursive: true });
@@ -64,7 +64,7 @@ describe('local workspaces', () => {
   });
 
   it('removes the folder and what the agent left in it', async () => {
-    const workspaces = localWorkspaces();
+    const workspaces = createLocalWorkspaces();
     const workspace = (await workspaces.create())._unsafeUnwrap();
     writeFileSync(join(workspace.path, 'hello.mjs'), 'console.log(1);\n');
     await workspaces.dispose(workspace);

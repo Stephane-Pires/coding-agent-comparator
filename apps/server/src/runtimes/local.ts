@@ -10,8 +10,8 @@ import {
   createClaudeCodeTaskClassifier,
 } from '@comparator/connector-claude-code';
 import { createCodexAgent } from '@comparator/connector-codex';
-import { recordedRuntime, Recording } from '@comparator/runtime-recorded';
-import { localWorkspaces } from '@comparator/workspace-local';
+import { createRecordedRuntime, Recording } from '@comparator/runtime-recorded';
+import { createLocalWorkspaces } from '@comparator/workspace-local';
 
 import type { Config } from '../config.ts';
 import type { Runtime } from '../container.ts';
@@ -46,14 +46,15 @@ export function machineRuntime(config: Config): Runtime {
         'claude-code': createClaudeCodeAgent(config.claudeCode.model, config.claudeCode.apiKey),
         codex: createCodexAgent(config.codex.model, config.codex.apiKey),
       },
-      workspaces: localWorkspaces(),
+      workspaces: createLocalWorkspaces(),
       ...questions(config),
     }),
     sandbox: () => hostedRuntime(config),
     recorded: () =>
-      recordedRuntime(z.array(Recording).parse(JSON.parse(readFileSync(RECORDINGS_FILE, 'utf8'))), {
-        paceMs: config.recordedPaceMs,
-      }),
+      createRecordedRuntime(
+        z.array(Recording).parse(JSON.parse(readFileSync(RECORDINGS_FILE, 'utf8'))),
+        config.recordedPaceMs,
+      ),
   };
   return runtimes[config.runtime]();
 }
