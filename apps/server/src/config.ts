@@ -1,6 +1,8 @@
 import { err, ok, type Result } from 'neverthrow';
 import { z } from 'zod';
 
+import { PASSWORD_MAX_CHARACTERS } from '@comparator/contracts';
+
 /** An empty value in `.env` (`KEY=`) means "not set". */
 const blankAsUnset = (value: unknown) =>
   typeof value === 'string' && value.trim() === '' ? undefined : value;
@@ -18,7 +20,7 @@ const Environment = z.object({
   CLAUDE_CODE_MODEL: optional(z.string()).default('haiku'),
   CODEX_MODEL: optional(z.string()).default('gpt-6-luna'),
   AGENT_RUNTIME: optional(z.enum(['local', 'recorded', 'sandbox'])),
-  DEMO_PASSWORD: optional(z.string().min(8).max(200)),
+  DEMO_PASSWORD: optional(z.string().min(8).max(PASSWORD_MAX_CHARACTERS)),
   /** Set by Vercel on everything it runs. */
   VERCEL: optional(z.string()),
   RECORDED_PACE_MS: optional(z.coerce.number().int().min(0)).default(60),

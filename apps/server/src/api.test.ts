@@ -223,7 +223,7 @@ describe('a private API', () => {
   });
 
   it('says to anyone whether they are allowed', async () => {
-    expect(await (await call('GET', '/api/access')).json()).toEqual({ allowed: false });
+    expect(await (await call('GET', '/api/access')).json()).toEqual({ isAllowed: false });
   });
 
   it('a wrong password is answered only after a wait, on the form and with a call', async () => {
@@ -237,13 +237,13 @@ describe('a private API', () => {
 
   it('a wrong password gives nothing', async () => {
     const wrong = await call('POST', '/api/access', {}, { password: 'open sesame ' });
-    expect(await wrong.json()).toEqual({ allowed: false });
+    expect(await wrong.json()).toEqual({ isAllowed: false });
     expect(wrong.headers.get('set-cookie')).toBeNull();
   });
 
   it('the right password gives a pass, which then opens the API', async () => {
     const entered = await call('POST', '/api/access', {}, { password: PASSWORD });
-    expect(await entered.json()).toEqual({ allowed: true });
+    expect(await entered.json()).toEqual({ isAllowed: true });
     const cookie = entered.headers.get('set-cookie') ?? '';
     // No script can read it, another site cannot use it, it is never sent in clear, and it does not hold the password.
     expect(cookie).toMatch(/HttpOnly/);
@@ -251,7 +251,7 @@ describe('a private API', () => {
     expect(cookie).toMatch(/Secure/);
     expect(cookie).not.toContain(PASSWORD);
     const pass = cookie.split(';')[0] ?? '';
-    expect(await (await call('GET', '/api/access', { cookie: pass })).json()).toEqual({ allowed: true });
+    expect(await (await call('GET', '/api/access', { cookie: pass })).json()).toEqual({ isAllowed: true });
     expect((await check({ cookie: pass })).status).toBe(200);
   });
 
@@ -269,9 +269,9 @@ describe('a private API', () => {
 describe('an API with no password, as on a dev machine', () => {
   it('allows everyone, and sets no cookie', async () => {
     const { app, post } = setup([]);
-    expect(await (await app.request('/api/access')).json()).toEqual({ allowed: true });
+    expect(await (await app.request('/api/access')).json()).toEqual({ isAllowed: true });
     const entered = await post('/api/access', { password: 'anything' });
-    expect(await entered.json()).toEqual({ allowed: true });
+    expect(await entered.json()).toEqual({ isAllowed: true });
     expect(entered.headers.get('set-cookie')).toBeNull();
   });
 });

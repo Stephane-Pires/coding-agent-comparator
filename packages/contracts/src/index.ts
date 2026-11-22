@@ -16,6 +16,9 @@ import {
 export { AgentId, Metrics, RunOutcome, Task, TASK_MAX_CHARACTERS, TaskVerdict, ToolCall, WorkspaceFile };
 export type { RunStatus, Tool } from '@comparator/domain';
 
+/** Room for any passphrase, and a bound on what a caller can make the server hash. */
+export const PASSWORD_MAX_CHARACTERS = 200;
+
 const RunInput = z.object({
   agent: AgentId.describe('The coding agent that runs the task.'),
   task: Task.describe('What the agent is asked to do, in plain language.'),
@@ -80,13 +83,12 @@ const NO_ACCESS = {
   UNAUTHORIZED: { status: 401, message: 'This API is private: give its password first.' },
 };
 
-const PASSWORD_MAX_LENGTH = 200;
 const PasswordInput = z.object({
-  password: z.string().max(PASSWORD_MAX_LENGTH).describe('The password of the app.'),
+  password: z.string().max(PASSWORD_MAX_CHARACTERS).describe('The password of the app.'),
 });
 
 const Access = z.object({
-  allowed: z.boolean().describe('Whether this caller may check tasks and start runs.'),
+  isAllowed: z.boolean().describe('Whether this caller may check tasks and start runs.'),
 });
 
 export const contract = {
@@ -111,7 +113,7 @@ export const contract = {
         summary: 'Give the password',
         description:
           'With the right password, the answer sets a cookie that gives access for a week; a browser sends ' +
-          'it back by itself. With a wrong one, `allowed` is false and nothing is set. ' +
+          'it back by itself. With a wrong one, `isAllowed` is false and nothing is set. ' +
           'A program can skip this and send the password with each call, as `Authorization: Bearer <password>`.',
       })
       .errors(INVALID_INPUT)

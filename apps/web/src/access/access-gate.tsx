@@ -35,7 +35,7 @@ export function AccessGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     let current = true;
     api.access.get().then(
-      ({ allowed }) => current && setState(allowed ? 'in' : 'out'),
+      ({ isAllowed }) => current && setState(isAllowed ? 'in' : 'out'),
       (error: unknown) => current && setFailure(error),
     );
     return () => {
@@ -44,8 +44,8 @@ export function AccessGate({ children }: { children: ReactNode }) {
   }, []);
   const [error, enter, pending] = useActionState(async (_previous: string | undefined, form: FormData) => {
     const password = form.get('password');
-    const { allowed } = await api.access.enter({ password: typeof password === 'string' ? password : '' });
-    if (!allowed) return 'That is not the password. Check it and try again.';
+    const { isAllowed } = await api.access.enter({ password: typeof password === 'string' ? password : '' });
+    if (!isAllowed) return 'That is not the password. Check it and try again.';
     // The padlock opens, then the locker gives way to the app.
     setOpened(true);
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches;

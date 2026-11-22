@@ -68,13 +68,13 @@ export function createApp({ startRun, checkTask }: AppDeps, options: AccessOptio
   const router = os.router({
     access: {
       get: os.access.get.handler(({ context }) => ({
-        allowed: access.allows(context.reqHeaders ?? new Headers()),
+        isAllowed: access.allows(context.reqHeaders ?? new Headers()),
       })),
       enter: os.access.enter.handler(async ({ input, context }) => {
-        const allowed = access.isPassword(input.password);
-        if (!allowed) await wait(WRONG_PASSWORD_WAIT_MS);
-        if (allowed && access.required) context.resHeaders?.set('set-cookie', access.passCookie());
-        return { allowed };
+        const isAllowed = access.isPassword(input.password);
+        if (!isAllowed) await wait(WRONG_PASSWORD_WAIT_MS);
+        if (isAllowed && access.required) context.resHeaders?.set('set-cookie', access.passCookie());
+        return { isAllowed };
       }),
     },
     tasks: {
