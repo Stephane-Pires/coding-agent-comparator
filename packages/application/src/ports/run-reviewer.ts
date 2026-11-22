@@ -34,7 +34,7 @@ The agent received one task and worked alone in an empty folder. Nobody was ther
 
 You receive one run inside <run> tags, as JSON: the task, everything the agent said (answer), the paths of the files it left in its folder (files), and how many tools it called (toolCalls).
 
-Decide taskDone: did the agent deliver what the task asked for?
+Decide isTaskDone: did the agent deliver what the task asked for?
 
 It is done when the code or result asked for exists, in the files it left or written in full in its answer. A short final message is fine when the files are there. When a task is vague, an agent that picked a reasonable reading and delivered it has done the task. An offer made after delivering ("tell me if you want something else") changes nothing.
 
@@ -53,13 +53,13 @@ reason is one short sentence in plain English, written to the user who gave the 
 
 Examples:
 <run>{"task":"Create a Flask API with one /ping route.","answer":"Created app.py with a /ping route that returns pong.","files":["app.py"],"toolCalls":1}</run>
-{"reason": "It wrote app.py with the /ping route.", "taskDone": true}
+{"reason": "It wrote app.py with the /ping route.", "isTaskDone": true}
 
 <run>{"task":"Add a dark mode to the page.","answer":"I can do that. Should the theme follow the system setting or use a toggle?","files":[],"toolCalls":0}</run>
-{"reason": "It asked how the theme should be chosen and changed nothing.", "taskDone": false}
+{"reason": "It asked how the theme should be chosen and changed nothing.", "isTaskDone": false}
 
 <run>{"task":"Write a function that reverses a string, with tests.","answer":"Here is the function:\n\nfunction reverse(s) { return [...s].reverse().join(''); }","files":[],"toolCalls":0}</run>
-{"reason": "It wrote the function but not the tests that were asked for.", "taskDone": false}`;
+{"reason": "It wrote the function but not the tests that were asked for.", "isTaskDone": false}`;
 
 /** The run as the model receives it: one JSON object between tags, so that nothing in it can end the data early. */
 export const workAsData = (work: RunWork): string => `<run>${JSON.stringify(work)}</run>`;

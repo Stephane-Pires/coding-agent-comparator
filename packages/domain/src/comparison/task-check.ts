@@ -10,7 +10,7 @@ export const TaskAssessment = z.object({
   /** The task asks to write, change, fix or test software. */
   isCodingTask: z.boolean(),
   /** Doing the task well leaves at least one file in the folder. */
-  resultIsFiles: z.boolean(),
+  hasFileResult: z.boolean(),
 });
 export type TaskAssessment = z.infer<typeof TaskAssessment>;
 
@@ -32,6 +32,5 @@ export type TaskVerdict = z.infer<typeof TaskVerdict>;
  * The rule for accepting a task: **it is a coding task, and its result is files.** The comparator compares what two
  * agents leave in a folder; a task that only calls for a written answer leaves nothing to compare.
  */
-export function verdictOf({ isCodingTask, resultIsFiles, reason }: TaskAssessment): TaskVerdict {
-  return isCodingTask && resultIsFiles ? { verdict: 'accepted' } : { verdict: 'refused', reason };
-}
+export const getVerdict = ({ isCodingTask, hasFileResult, reason }: TaskAssessment): TaskVerdict =>
+  isCodingTask && hasFileResult ? { verdict: 'accepted' } : { verdict: 'refused', reason };

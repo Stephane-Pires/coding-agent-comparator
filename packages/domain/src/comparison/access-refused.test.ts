@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { accessRefused, rateLimited } from './access-refused.ts';
+import { isAccessRefused, isRateLimited } from './access-refused.ts';
 
-describe('accessRefused', () => {
+describe('isAccessRefused', () => {
   it.each([
     // Seen on 2026-11-21, with keys the providers did not know.
     'Invalid API key · Fix external API key',
@@ -14,7 +14,7 @@ describe('accessRefused', () => {
     'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.',
     'You exceeded your current quota, please check your plan and billing details. (insufficient_quota)',
   ])('recognises a refusal of the app itself: %s', (reason) => {
-    expect(accessRefused(reason)).toBe(true);
+    expect(isAccessRefused(reason)).toBe(true);
   });
 
   it.each([
@@ -23,24 +23,24 @@ describe('accessRefused', () => {
     'npm test failed: expected 401 but the server answered 200',
     'The agent exited with code 1.',
   ])('leaves an ordinary failure alone: %s', (reason) => {
-    expect(accessRefused(reason)).toBe(false);
+    expect(isAccessRefused(reason)).toBe(false);
   });
 });
 
-describe('rateLimited', () => {
+describe('isRateLimited', () => {
   it.each([
     // The providers' documented words for too many requests, or a busy service; not seen here.
     'API Error: 429 {"type":"error","error":{"type":"rate_limit_error","message":"Number of requests has exceeded your rate limit"}}',
     'API Error: 529 {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}',
     'unexpected status 429 Too Many Requests: Rate limit reached for gpt-6-luna in organization org-x on tokens per min.',
   ])('recognises a provider that is limiting requests for now: %s', (reason) => {
-    expect(rateLimited(reason)).toBe(true);
+    expect(isRateLimited(reason)).toBe(true);
   });
 
   it.each(['The agent exited with code 1.', 'npm test failed: expected 401 but the server answered 200'])(
     'leaves an ordinary failure alone: %s',
     (reason) => {
-      expect(rateLimited(reason)).toBe(false);
+      expect(isRateLimited(reason)).toBe(false);
     },
   );
 });

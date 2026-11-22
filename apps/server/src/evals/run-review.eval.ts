@@ -32,7 +32,7 @@ await measure({
   answer: async ({ task, answer, files, toolCalls }) => {
     const work = { task: Task.parse(task), answer, files, toolCalls };
     const review = await reviewer.review(work, AbortSignal.timeout(90_000));
-    return { got: review.taskDone ? 'done' : 'not-done', reason: review.reason };
+    return { got: review.isTaskDone ? 'done' : 'not-done', reason: review.reason };
   },
   // Calling finished work incomplete is worse than missing an agent that stopped short.
   worst: { label: 'Done runs called not done', is: (_, got) => got === 'not-done' },

@@ -6,14 +6,14 @@ import {
   Metrics,
   RunOutcome,
   Task,
-  TASK_MAX_LENGTH,
+  TASK_MAX_CHARACTERS,
   TaskVerdict,
   ToolCall,
   WorkspaceFile,
 } from '@comparator/domain';
 
 // The domain's vocabulary that clients need: they import it from here, never from the domain.
-export { AgentId, Metrics, RunOutcome, Task, TASK_MAX_LENGTH, TaskVerdict, ToolCall, WorkspaceFile };
+export { AgentId, Metrics, RunOutcome, Task, TASK_MAX_CHARACTERS, TaskVerdict, ToolCall, WorkspaceFile };
 export type { RunStatus, Tool } from '@comparator/domain';
 
 const RunInput = z.object({

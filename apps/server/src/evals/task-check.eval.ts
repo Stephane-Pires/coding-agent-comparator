@@ -7,7 +7,7 @@ import { join } from 'node:path';
 
 import { z } from 'zod';
 
-import { Task, verdictOf } from '@comparator/domain';
+import { Task, getVerdict } from '@comparator/domain';
 
 import { measure } from './measure.ts';
 import { route } from './route.ts';
@@ -24,7 +24,7 @@ await measure({
   title: ({ task }) => task,
   answer: async ({ task }) => {
     const assessment = await classifier.assess(Task.parse(task), AbortSignal.timeout(90_000));
-    return { got: verdictOf(assessment).verdict, reason: assessment.reason };
+    return { got: getVerdict(assessment).verdict, reason: assessment.reason };
   },
   // Refusing real work is worse than letting a poem through.
   worst: {

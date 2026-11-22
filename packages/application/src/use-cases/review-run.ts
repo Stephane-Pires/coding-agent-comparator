@@ -1,4 +1,4 @@
-import { reviewedOutcome, type RunOutcome } from '@comparator/domain';
+import { getReviewedOutcome, type RunOutcome } from '@comparator/domain';
 
 import type { RunReviewer, RunWork } from '../ports/run-reviewer.ts';
 
@@ -16,7 +16,7 @@ export type ReviewRun = (input: ReviewRunInput) => Promise<RunOutcome>;
 
 /**
  * Says how a run ended when its agent stopped without error: succeeded if it did its task, incomplete if not (the
- * rule is `reviewedOutcome`).
+ * rule is `getReviewedOutcome`).
  *
  * Like the task check, the review is a filter: when the reviewer cannot answer, the run keeps the benefit of the
  * doubt and counts as succeeded.
@@ -24,7 +24,7 @@ export type ReviewRun = (input: ReviewRunInput) => Promise<RunOutcome>;
 export function reviewRun({ reviewer }: ReviewRunDeps): ReviewRun {
   return async ({ work, signal }) => {
     try {
-      return reviewedOutcome(await reviewer.review(work, signal));
+      return getReviewedOutcome(await reviewer.review(work, signal));
     } catch {
       return { status: 'succeeded' };
     }

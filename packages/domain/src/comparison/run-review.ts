@@ -10,7 +10,7 @@ export const RunReview = z.object({
   /** One sentence for the user: what the agent delivered, or what is missing. */
   reason: z.string(),
   /** The agent delivered what the task asked for. */
-  taskDone: z.boolean(),
+  isTaskDone: z.boolean(),
 });
 export type RunReview = z.infer<typeof RunReview>;
 
@@ -22,6 +22,5 @@ export const RUN_REVIEW_JSON_SCHEMA: Record<string, unknown> = reviewSchema;
  * The rule for a run whose agent stopped without error: **it succeeded only if its task was done.** Otherwise it is
  * incomplete, with the reviewer's sentence as the reason.
  */
-export function reviewedOutcome({ taskDone, reason }: RunReview): RunOutcome {
-  return taskDone ? { status: 'succeeded' } : { status: 'incomplete', reason };
-}
+export const getReviewedOutcome = ({ isTaskDone, reason }: RunReview): RunOutcome =>
+  isTaskDone ? { status: 'succeeded' } : { status: 'incomplete', reason };

@@ -1,5 +1,14 @@
 import { z } from 'zod';
 
+/** The tokens of a run as the agents can all give them: what was read apart from what was read from the cache. */
+export interface TokenCounts {
+  /** Input the model read that did not come from the cache, including what it wrote to the cache. */
+  readonly uncachedInput: number;
+  /** Input the model read from the cache. */
+  readonly cachedInput: number;
+  readonly output: number;
+}
+
 const count = z.number().int().nonnegative();
 
 /**
@@ -17,15 +26,6 @@ export const Usage = z.object({
   costUsd: z.number().nonnegative().nullable(),
 });
 export type Usage = z.infer<typeof Usage>;
-
-/** The tokens of a run as the agents can all give them: what was read apart from what was read from the cache. */
-export interface TokenCounts {
-  /** Input the model read that did not come from the cache, including what it wrote to the cache. */
-  readonly uncachedInput: number;
-  /** Input the model read from the cache. */
-  readonly cachedInput: number;
-  readonly output: number;
-}
 
 /**
  * The rule for counting tokens: **input tokens are everything the model read, cached or not**, with the cached

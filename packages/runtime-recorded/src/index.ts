@@ -111,8 +111,8 @@ export function recordedRuntime(
         const verdict = known(task)?.verdict;
         return Promise.resolve(
           verdict?.verdict === 'refused'
-            ? { reason: verdict.reason, isCodingTask: false, resultIsFiles: false }
-            : { reason: 'A recorded task.', isCodingTask: true, resultIsFiles: true },
+            ? { reason: verdict.reason, isCodingTask: false, hasFileResult: false }
+            : { reason: 'A recorded task.', isCodingTask: true, hasFileResult: true },
         );
       },
     },
@@ -123,8 +123,8 @@ export function recordedRuntime(
         const outcome = run?.flatMap((event) => (event.kind === 'finished' ? [event.outcome] : [])).at(0);
         return Promise.resolve(
           outcome?.status === 'incomplete'
-            ? { reason: outcome.reason, taskDone: false }
-            : { reason: 'Recorded as done.', taskDone: true },
+            ? { reason: outcome.reason, isTaskDone: false }
+            : { reason: 'Recorded as done.', isTaskDone: true },
         );
       },
     },

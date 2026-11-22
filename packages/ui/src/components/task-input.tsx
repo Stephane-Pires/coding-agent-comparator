@@ -2,7 +2,7 @@
 
 import { useId, useState, type FormEvent, type KeyboardEvent } from 'react';
 
-import { Task, TASK_MAX_LENGTH } from '@comparator/contracts';
+import { Task, TASK_MAX_CHARACTERS } from '@comparator/contracts';
 import { Button } from '@comparator/ui/components/ui/button';
 import { Textarea } from '@comparator/ui/components/ui/textarea';
 import { ICONS } from '@comparator/ui/icons';
@@ -50,7 +50,7 @@ export function TaskInput({ running, onSend, onStop }: TaskInputProps) {
         onKeyDown={onKeyDown}
         placeholder="Describe a task to send to every agent"
         rows={2}
-        maxLength={TASK_MAX_LENGTH}
+        maxLength={TASK_MAX_CHARACTERS}
         className="max-h-48"
       />
       {running ? (

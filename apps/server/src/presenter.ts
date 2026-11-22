@@ -1,5 +1,5 @@
 import type { RunChunk } from '@comparator/contracts';
-import { accessRefused, rateLimited, type RunEvent, type RunOutcome } from '@comparator/domain';
+import { isAccessRefused, isRateLimited, type RunEvent, type RunOutcome } from '@comparator/domain';
 
 /**
  * What a visitor is told when the app's own access to a provider was refused. The provider's words are for
@@ -19,11 +19,11 @@ export const RATE_LIMITED =
  */
 function shown(outcome: RunOutcome, log: (line: string) => void): RunOutcome {
   if (outcome.status !== 'failed') return outcome;
-  if (accessRefused(outcome.reason)) {
+  if (isAccessRefused(outcome.reason)) {
     log(`A provider refused the app's access. Its words: ${outcome.reason}`);
     return { status: 'failed', reason: ACCESS_REFUSED };
   }
-  if (rateLimited(outcome.reason)) {
+  if (isRateLimited(outcome.reason)) {
     log(`A provider is limiting requests. Its words: ${outcome.reason}`);
     return { status: 'failed', reason: RATE_LIMITED };
   }

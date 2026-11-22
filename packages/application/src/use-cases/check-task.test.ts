@@ -10,13 +10,13 @@ const signal = new AbortController().signal;
 
 describe('checkTask', () => {
   it('accepts a coding task whose result is files, and asks about the task it was given', async () => {
-    const classifier = scriptedClassifier({ reason: 'A script.', isCodingTask: true, resultIsFiles: true });
+    const classifier = scriptedClassifier({ reason: 'A script.', isCodingTask: true, hasFileResult: true });
     expect(await checkTask({ classifier })({ task, signal })).toEqual({ verdict: 'accepted' });
     expect(classifier.asked).toEqual([task]);
   });
 
   it("refuses any other task, with the classifier's reason", async () => {
-    const classifier = scriptedClassifier({ reason: 'Not code.', isCodingTask: false, resultIsFiles: false });
+    const classifier = scriptedClassifier({ reason: 'Not code.', isCodingTask: false, hasFileResult: false });
     expect(await checkTask({ classifier })({ task, signal })).toEqual({
       verdict: 'refused',
       reason: 'Not code.',
@@ -24,7 +24,7 @@ describe('checkTask', () => {
   });
 
   it('asks the classifier once for a task, then remembers its verdict', async () => {
-    const classifier = scriptedClassifier({ reason: 'Not code.', isCodingTask: false, resultIsFiles: false });
+    const classifier = scriptedClassifier({ reason: 'Not code.', isCodingTask: false, hasFileResult: false });
     const check = checkTask({ classifier });
     await check({ task, signal });
     expect(await check({ task, signal })).toEqual({ verdict: 'refused', reason: 'Not code.' });

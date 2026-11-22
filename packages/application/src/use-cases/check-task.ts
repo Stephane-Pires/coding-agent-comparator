@@ -1,4 +1,4 @@
-import { verdictOf, type Task, type TaskVerdict } from '@comparator/domain';
+import { getVerdict, type Task, type TaskVerdict } from '@comparator/domain';
 
 import type { TaskClassifier } from '../ports/task-classifier.ts';
 
@@ -18,7 +18,7 @@ const REMEMBERED_TASKS = 200;
 export type CheckTask = (input: CheckTaskInput) => Promise<TaskVerdict>;
 
 /**
- * Says whether the agents may run a task: only a coding task whose result is files (the rule is `verdictOf`).
+ * Says whether the agents may run a task: only a coding task whose result is files (the rule is `getVerdict`).
  *
  * The check is a filter, not a lock: when the classifier cannot answer, the task is accepted, so that a model that
  * is down or slow never stops the product.
@@ -32,7 +32,7 @@ export function checkTask({ classifier }: CheckTaskDeps): CheckTask {
     const known = remembered.get(task);
     if (known) return known;
     try {
-      const verdict = verdictOf(await classifier.assess(task, signal));
+      const verdict = getVerdict(await classifier.assess(task, signal));
       // The oldest goes first: a Map keeps the order its keys were added in.
       if (remembered.size >= REMEMBERED_TASKS) remembered.delete(remembered.keys().next().value ?? task);
       remembered.set(task, verdict);
