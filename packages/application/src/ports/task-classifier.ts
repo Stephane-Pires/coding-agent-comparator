@@ -3,7 +3,7 @@ import type { Task, TaskAssessment } from '@comparator/domain';
 /**
  * Says whether a task is a coding task whose result is files, by asking a model.
  *
- * The adapter carries `TASK_CHECK_INSTRUCTIONS` and `taskAsData(task)` to its model and returns the answer. It may
+ * The adapter carries `TASK_CHECK_INSTRUCTIONS` and `formatTask(task)` to its model and returns the answer. It may
  * throw when the model cannot be reached or answers out of shape: `checkTask` decides what that means.
  */
 export interface TaskClassifier {
@@ -47,4 +47,4 @@ Examples:
 {"reason": "This does not ask for anything to be built. Describe the code you want written.", "isCodingTask": false, "hasFileResult": false}`;
 
 /** The task as the model receives it: a JSON string between tags, so that nothing in it can end the data early. */
-export const taskAsData = (task: Task): string => `<task>${JSON.stringify(task)}</task>`;
+export const formatTask = (task: Task): string => `<task>${JSON.stringify(task)}</task>`;

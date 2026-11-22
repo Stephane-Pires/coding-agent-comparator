@@ -32,12 +32,12 @@ const signal = new AbortController().signal;
 const recordings: Recording[] = [];
 for (const text of TASKS) {
   const task = Task.parse(text);
-  const verdict = await checkTask({ task, signal });
+  const verdict = await checkTask(task, signal);
   const runs: Recording['runs'] = {};
   if (verdict.verdict === 'accepted')
     await Promise.all(
       AgentId.options.map(async (agent) => {
-        runs[agent] = await Array.fromAsync(startRun({ agent, task, signal }));
+        runs[agent] = await Array.fromAsync(startRun(agent, task, signal));
       }),
     );
   const endings = Object.entries(runs).map(([agent, events]: [string, RunEvent[]]) => {

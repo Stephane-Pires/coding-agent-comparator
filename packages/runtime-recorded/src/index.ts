@@ -60,7 +60,7 @@ export function recordedRuntime(
   let created = 0;
 
   const agent = (id: AgentId): CodingAgent => ({
-    async *run({ task, workspace, signal }): AsyncGenerator<AgentEvent, void, void> {
+    async *run(task, workspace, signal): AsyncGenerator<AgentEvent, void, void> {
       const events = played(task)?.runs[id] ?? [];
       const files = open.get(workspace.path);
       const metrics = events.flatMap((event) => (event.kind === 'metrics' ? [event.metrics] : [])).at(0);

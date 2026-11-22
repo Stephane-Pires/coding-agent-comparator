@@ -80,12 +80,12 @@ export function createApp({ startRun, checkTask }: AppDeps, options: AccessOptio
     tasks: {
       check: os.tasks.check
         .use(locked)
-        .handler(({ input, signal }) => checkTask({ ...input, signal: signal ?? NEVER_ABORTED })),
+        .handler(({ input, signal }) => checkTask(input.task, signal ?? NEVER_ABORTED)),
     },
     runs: {
       start: os.runs.start
         .use(locked)
-        .handler(({ input, signal }) => present(startRun({ ...input, signal: signal ?? NEVER_ABORTED }))),
+        .handler(({ input, signal }) => present(startRun(input.agent, input.task, signal ?? NEVER_ABORTED))),
     },
   });
   const plugins = [new RequestHeadersPlugin<Context>(), new ResponseHeadersPlugin<Context>()];

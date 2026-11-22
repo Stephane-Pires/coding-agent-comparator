@@ -5,8 +5,8 @@ import type { z } from 'zod';
 import {
   RUN_REVIEW_INSTRUCTIONS,
   TASK_CHECK_INSTRUCTIONS,
-  taskAsData,
-  workAsData,
+  formatTask,
+  formatWork,
   type RunReviewer,
   type TaskClassifier,
 } from '@comparator/application';
@@ -71,7 +71,7 @@ export function anthropicQuestions(
         ask(messages, {
           model,
           instructions: TASK_CHECK_INSTRUCTIONS,
-          data: taskAsData(task),
+          data: formatTask(task),
           schema: TaskAssessment,
           signal,
         }),
@@ -81,7 +81,7 @@ export function anthropicQuestions(
         ask(messages, {
           model,
           instructions: RUN_REVIEW_INSTRUCTIONS,
-          data: workAsData(work),
+          data: formatWork(work),
           schema: RunReview,
           signal,
         }),

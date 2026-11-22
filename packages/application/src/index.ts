@@ -1,8 +1,8 @@
 export type { Clock } from './ports/clock.ts';
 export type { CodingAgent } from './ports/coding-agent.ts';
-export { RUN_REVIEW_INSTRUCTIONS, workAsData } from './ports/run-reviewer.ts';
+export { RUN_REVIEW_INSTRUCTIONS, formatWork } from './ports/run-reviewer.ts';
 export type { RunReviewer } from './ports/run-reviewer.ts';
-export { TASK_CHECK_INSTRUCTIONS, taskAsData } from './ports/task-classifier.ts';
+export { TASK_CHECK_INSTRUCTIONS, formatTask } from './ports/task-classifier.ts';
 export type { TaskClassifier } from './ports/task-classifier.ts';
 export type { Workspace, WorkspaceError, WorkspaceProvider } from './ports/workspace-provider.ts';
 export { checkTask } from './use-cases/check-task.ts';

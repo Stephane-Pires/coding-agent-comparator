@@ -14,7 +14,7 @@ interface ClaudeCodeOptions {
 
 export function claudeCodeAgent({ model, apiKey }: ClaudeCodeOptions): CodingAgent {
   return {
-    async *run({ task, workspace, signal }) {
+    async *run(task, workspace, signal) {
       const abortController = new AbortController();
       const abort = () => abortController.abort();
       signal.addEventListener('abort', abort, { once: true });

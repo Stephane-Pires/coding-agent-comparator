@@ -12,7 +12,7 @@ export type Runtime = RecordedRuntime;
  */
 export function createContainer({ agents, workspaces, classifier, reviewer }: Runtime): AppDeps {
   // One check for the whole API: a run finds the verdict its comparison already asked for.
-  const check = checkTask({ classifier });
+  const check = checkTask(classifier);
   return {
     checkTask: check,
     startRun: startRun({
@@ -20,7 +20,7 @@ export function createContainer({ agents, workspaces, classifier, reviewer }: Ru
       workspaces,
       clock: { now: () => performance.now() },
       checkTask: check,
-      reviewRun: reviewRun({ reviewer }),
+      reviewRun: reviewRun(reviewer),
     }),
   };
 }

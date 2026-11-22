@@ -1,4 +1,4 @@
-import { TASK_CHECK_INSTRUCTIONS, taskAsData, type TaskClassifier } from '@comparator/application';
+import { TASK_CHECK_INSTRUCTIONS, formatTask, type TaskClassifier } from '@comparator/application';
 import { TASK_ASSESSMENT_JSON_SCHEMA, TaskAssessment } from '@comparator/domain';
 
 import { ask, type AskOptions } from './ask.ts';
@@ -10,7 +10,7 @@ export function claudeCodeTaskClassifier(options: AskOptions): TaskClassifier {
       ask({
         ...options,
         instructions: TASK_CHECK_INSTRUCTIONS,
-        data: taskAsData(task),
+        data: formatTask(task),
         schema: TASK_ASSESSMENT_JSON_SCHEMA,
         parse: (answer) => TaskAssessment.parse(answer),
         signal,

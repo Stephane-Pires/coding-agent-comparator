@@ -136,7 +136,7 @@ export function sandboxRuntime(
   };
 
   const agent = (cli: CommandLineAgent): CodingAgent => ({
-    async *run({ task, workspace, signal }) {
+    async *run(task, workspace, signal) {
       const sandbox = sandboxOf(workspace);
       const limit = AbortSignal.timeout(runLimitMs);
       const stopped = AbortSignal.any([signal, limit]);

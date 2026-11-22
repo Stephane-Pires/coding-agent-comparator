@@ -41,11 +41,11 @@ function replay(task: string) {
     agents,
     workspaces,
     clock: { now: () => 0 },
-    checkTask: checkTask({ classifier }),
-    reviewRun: reviewRun({ reviewer }),
+    checkTask: checkTask(classifier),
+    reviewRun: reviewRun(reviewer),
   });
   const signal = new AbortController().signal;
-  return Array.fromAsync(run({ agent: 'claude-code', task: Task.parse(task), signal }));
+  return Array.fromAsync(run('claude-code', Task.parse(task), signal));
 }
 /** A run without its duration, which is the replay's own. */
 const timeless = (events: readonly RunEvent[]) =>

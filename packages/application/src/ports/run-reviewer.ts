@@ -15,7 +15,7 @@ export interface RunWork {
  * Says whether a run that ended without error did its task, by asking a model. An agent can end cleanly having
  * only asked a question back, or described what it would do.
  *
- * The adapter carries `RUN_REVIEW_INSTRUCTIONS` and `workAsData(work)` to its model and returns the answer. It may
+ * The adapter carries `RUN_REVIEW_INSTRUCTIONS` and `formatWork(work)` to its model and returns the answer. It may
  * throw when the model cannot be reached or answers out of shape. The reviewer is never told which agent did the
  * work: one of the agents may be of the reviewer's own family.
  */
@@ -62,4 +62,4 @@ Examples:
 {"reason": "It wrote the function but not the tests that were asked for.", "isTaskDone": false}`;
 
 /** The run as the model receives it: one JSON object between tags, so that nothing in it can end the data early. */
-export const workAsData = (work: RunWork): string => `<run>${JSON.stringify(work)}</run>`;
+export const formatWork = (work: RunWork): string => `<run>${JSON.stringify(work)}</run>`;

@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vite-plus/test';
 import {
   RUN_REVIEW_INSTRUCTIONS,
   TASK_CHECK_INSTRUCTIONS,
-  taskAsData,
-  workAsData,
+  formatTask,
+  formatWork,
 } from '@comparator/application';
 import { Task } from '@comparator/domain';
 
@@ -34,7 +34,7 @@ describe('anthropicQuestions', () => {
     expect(requests[0]).toMatchObject({
       model: 'a-model',
       system: TASK_CHECK_INSTRUCTIONS,
-      messages: [{ role: 'user', content: taskAsData(task) }],
+      messages: [{ role: 'user', content: formatTask(task) }],
       output_config: { effort: 'low' },
     });
   });
@@ -46,7 +46,7 @@ describe('anthropicQuestions', () => {
     expect(await questions.reviewer.review(work, signal)).toEqual(review);
     expect(requests[0]).toMatchObject({
       system: RUN_REVIEW_INSTRUCTIONS,
-      messages: [{ role: 'user', content: workAsData(work) }],
+      messages: [{ role: 'user', content: formatWork(work) }],
     });
   });
 

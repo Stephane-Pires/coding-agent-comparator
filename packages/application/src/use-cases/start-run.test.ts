@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import { Task, type AgentEvent, type Metrics, type RunEvent, type WorkspaceFile } from '@comparator/domain';
 
+import type { RunWork } from '../ports/run-reviewer.ts';
 import { inMemoryWorkspaces, scriptedAgent, tickingClock, type Step } from '../testing/index.ts';
 import type { CheckTask } from './check-task.ts';
-import type { ReviewRun, ReviewRunInput } from './review-run.ts';
+import type { ReviewRun } from './review-run.ts';
 import { startRun } from './start-run.ts';
 
 const task = Task.parse('write a script');
@@ -43,7 +44,7 @@ function setup(
     checkTask,
     reviewRun,
   });
-  const all = () => Array.fromAsync(run({ agent: 'claude-code', task, signal: controller.signal }));
+  const all = () => Array.fromAsync(run('claude-code', task, controller.signal));
   /** The run without its totals, which have their own tests. */
   const events = async () => (await all()).filter((event) => event.kind !== 'metrics');
   const metrics = async (): Promise<Metrics[]> =>
@@ -69,9 +70,9 @@ describe('startRun', () => {
     });
 
     it('shows the reviewer the task, what the agent said, the files it left and how many tools it called', async () => {
-      const seen: ReviewRunInput[] = [];
-      const watching: ReviewRun = (input) => {
-        seen.push(input);
+      const seen: RunWork[] = [];
+      const watching: ReviewRun = (work) => {
+        seen.push(work);
         return Promise.resolve({ status: 'succeeded' });
       };
       const workspaces = inMemoryWorkspaces({ reads: [[file('a.mjs', '1')]] });
@@ -81,9 +82,7 @@ describe('startRun', () => {
         accepts,
         watching,
       ).all();
-      expect(seen.map(({ work }) => work)).toEqual([
-        { task, answer: 'one\n\ntwo', files: ['a.mjs'], toolCalls: 1 },
-      ]);
+      expect(seen).toEqual([{ task, answer: 'one\n\ntwo', files: ['a.mjs'], toolCalls: 1 }]);
     });
 
     it('does not count the review in the duration of the run', async () => {
@@ -93,9 +92,9 @@ describe('startRun', () => {
     });
 
     it('is not asked for a run that failed', async () => {
-      const seen: ReviewRunInput[] = [];
-      const watching: ReviewRun = (input) => {
-        seen.push(input);
+      const seen: RunWork[] = [];
+      const watching: ReviewRun = (work) => {
+        seen.push(work);
         return Promise.resolve({ status: 'succeeded' });
       };
       await setup([failed('boom')], inMemoryWorkspaces(), accepts, watching).all();
@@ -153,7 +152,7 @@ describe('startRun', () => {
   it('ends as cancelled when the run is aborted and the agent throws', async () => {
     const { controller, run } = setup([message('one'), 'wait-for-abort', { throws: new Error('aborted') }]);
     const seen: RunEvent[] = [];
-    for await (const event of run({ agent: 'claude-code', task, signal: controller.signal })) {
+    for await (const event of run('claude-code', task, controller.signal)) {
       seen.push(event);
       controller.abort();
     }
@@ -163,7 +162,7 @@ describe('startRun', () => {
   it('ends as cancelled when the run is aborted and the agent just stops', async () => {
     const { controller, run } = setup([message('one'), 'wait-for-abort']);
     const seen: RunEvent[] = [];
-    for await (const event of run({ agent: 'claude-code', task, signal: controller.signal })) {
+    for await (const event of run('claude-code', task, controller.signal)) {
       seen.push(event);
       controller.abort();
     }
@@ -237,7 +236,7 @@ describe('startRun', () => {
       const workspaces = inMemoryWorkspaces({ reads: [[file('a.mjs', '1')]] });
       const { controller, run } = setup([message('one'), 'wait-for-abort'], workspaces);
       const seen: RunEvent[] = [];
-      for await (const event of run({ agent: 'claude-code', task, signal: controller.signal })) {
+      for await (const event of run('claude-code', task, controller.signal)) {
         seen.push(event);
         controller.abort();
       }
@@ -289,7 +288,7 @@ describe('startRun', () => {
     it('gives no totals for a cancelled run', async () => {
       const { controller, run } = setup([message('one'), 'wait-for-abort']);
       const seen: RunEvent[] = [];
-      for await (const event of run({ agent: 'claude-code', task, signal: controller.signal })) {
+      for await (const event of run('claude-code', task, controller.signal)) {
         seen.push(event);
         controller.abort();
       }
@@ -299,7 +298,7 @@ describe('startRun', () => {
 
   it('disposes of the workspace when the reader stops listening', async () => {
     const { workspaces, controller, run } = setup([message('one'), message('two'), succeeded]);
-    const stream = run({ agent: 'claude-code', task, signal: controller.signal });
+    const stream = run('claude-code', task, controller.signal);
     await stream.next();
     await stream.return();
     expect(workspaces.disposed).toEqual(workspaces.created);

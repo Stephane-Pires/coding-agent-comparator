@@ -3,7 +3,7 @@ import { errAsync, okAsync } from 'neverthrow';
 import type { AgentEvent, RunReview, Task, TaskAssessment, WorkspaceFile } from '@comparator/domain';
 
 import type { Clock } from '../ports/clock.ts';
-import type { AgentRun, CodingAgent } from '../ports/coding-agent.ts';
+import type { CodingAgent } from '../ports/coding-agent.ts';
 import type { RunReviewer, RunWork } from '../ports/run-reviewer.ts';
 import type { TaskClassifier } from '../ports/task-classifier.ts';
 import type { Workspace, WorkspaceProvider } from '../ports/workspace-provider.ts';
@@ -11,7 +11,14 @@ import type { Workspace, WorkspaceProvider } from '../ports/workspace-provider.t
 /** One step of a scripted agent: an event to yield, an error to throw, or a pause until the run is aborted. */
 export type Step = AgentEvent | { readonly throws: Error } | 'wait-for-abort';
 
-const aborted = (signal: AbortSignal) =>
+/** What a scripted agent was given for one run. */
+interface GivenRun {
+  readonly task: Task;
+  readonly workspace: Workspace;
+  readonly signal: AbortSignal;
+}
+
+const waitForAbort = (signal: AbortSignal) =>
   new Promise<void>((resolve) => {
     if (signal.aborted) resolve();
     else signal.addEventListener('abort', () => resolve(), { once: true });
@@ -24,16 +31,19 @@ export function tickingClock(tickMs: number): Clock {
 }
 
 /** An agent that replays `steps`, and records the runs it was given. */
-export function scriptedAgent(steps: readonly Step[]): CodingAgent & { readonly runs: AgentRun[] } {
-  const runs: AgentRun[] = [];
+export function scriptedAgent(steps: readonly Step[]): CodingAgent & { readonly runs: GivenRun[] } {
+  const runs: GivenRun[] = [];
   return {
     runs,
-    async *run(run) {
-      runs.push(run);
+    async *run(task, workspace, signal) {
+      runs.push({ task, workspace, signal });
       for (const step of steps) {
-        if (step === 'wait-for-abort') await aborted(run.signal);
-        else if ('throws' in step) throw step.throws;
-        else yield step;
+        if (step === 'wait-for-abort') {
+          await waitForAbort(signal);
+          continue;
+        }
+        if ('throws' in step) throw step.throws;
+        yield step;
       }
     },
   };

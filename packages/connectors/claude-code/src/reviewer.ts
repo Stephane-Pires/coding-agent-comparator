@@ -1,4 +1,4 @@
-import { RUN_REVIEW_INSTRUCTIONS, workAsData, type RunReviewer } from '@comparator/application';
+import { RUN_REVIEW_INSTRUCTIONS, formatWork, type RunReviewer } from '@comparator/application';
 import { RUN_REVIEW_JSON_SCHEMA, RunReview } from '@comparator/domain';
 
 import { ask, type AskOptions } from './ask.ts';
@@ -10,7 +10,7 @@ export function claudeCodeRunReviewer(options: AskOptions): RunReviewer {
       ask({
         ...options,
         instructions: RUN_REVIEW_INSTRUCTIONS,
-        data: workAsData(work),
+        data: formatWork(work),
         schema: RUN_REVIEW_JSON_SCHEMA,
         parse: (answer) => RunReview.parse(answer),
         signal,

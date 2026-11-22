@@ -6,7 +6,7 @@ import type { Workspace, WorkspaceProvider } from '../ports/workspace-provider.t
 import type { CheckTask } from './check-task.ts';
 import type { ReviewRun } from './review-run.ts';
 
-export interface StartRunDeps {
+interface StartRunDeps {
   readonly agents: Readonly<Record<AgentId, CodingAgent>>;
   readonly workspaces: WorkspaceProvider;
   readonly clock: Clock;
@@ -16,16 +16,14 @@ export interface StartRunDeps {
   readonly reviewRun: ReviewRun;
 }
 
-export interface StartRunInput {
-  readonly agent: AgentId;
-  readonly task: Task;
-  /** Aborting it cancels the run. */
-  readonly signal: AbortSignal;
-}
+/** Runs one agent on a task. Aborting the signal cancels the run. */
+export type StartRun = (
+  agent: AgentId,
+  task: Task,
+  signal: AbortSignal,
+) => AsyncGenerator<RunEvent, void, void>;
 
-export type StartRun = (input: StartRunInput) => AsyncGenerator<RunEvent, void, void>;
-
-const reasonOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
+const getErrorMessage = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
 /**
  * Follows the files of a workspace: each call reads it and yields the files that changed since the call before,
@@ -38,8 +36,8 @@ function followFiles(workspaces: WorkspaceProvider, workspace: Workspace) {
   const known = new Map<string, WorkspaceFile>();
   return {
     /** The paths of the files the workspace held at the last read. */
-    paths: () => [...known.values()].filter((file) => file.state !== 'deleted').map((file) => file.path),
-    async *changes(): AsyncGenerator<RunEvent, void, void> {
+    getPaths: () => [...known.values()].filter((file) => file.state !== 'deleted').map((file) => file.path),
+    async *readChanges(): AsyncGenerator<RunEvent, void, void> {
       const files = await workspaces.read(workspace);
       const paths = new Set(files.map(({ path }) => path));
       const gone = [...known.keys()]
@@ -63,10 +61,10 @@ function followFiles(workspaces: WorkspaceProvider, workspace: Workspace) {
  * workspace is disposed of. A run that was not cancelled gives its totals just before, also when it failed.
  */
 export const startRun = ({ agents, workspaces, clock, checkTask, reviewRun }: StartRunDeps): StartRun =>
-  async function* run({ agent, task, signal }) {
+  async function* run(agent, task, signal) {
     // A task that is refused starts nothing: no workspace, no agent. The page asks first and shows the refusal
     // once; this is what stops a caller that did not ask.
-    const verdict = await checkTask({ task, signal });
+    const verdict = await checkTask(task, signal);
     if (verdict.verdict === 'refused') {
       yield { kind: 'finished', outcome: { status: 'failed', reason: verdict.reason } };
       return;
@@ -81,56 +79,63 @@ export const startRun = ({ agents, workspaces, clock, checkTask, reviewRun }: St
     const files = followFiles(workspaces, workspace);
     const toolCalls = new Set<string>();
     const said: string[] = [];
+    // What the agent reports as it goes: the stream is read once, so these are filled in while it is read.
     let model: string | null = null;
     let usage: Usage | null = null;
     try {
       let outcome: RunOutcome | undefined;
       try {
-        for await (const event of agents[agent].run({ task, workspace, signal })) {
+        for await (const event of agents[agent].run(task, workspace, signal)) {
           if (event.kind === 'finished') {
             outcome = event.outcome;
             break;
           }
-          if (event.kind === 'model') {
-            ({ model } = event);
-            continue;
+          switch (event.kind) {
+            case 'model':
+              model = event.model;
+              break;
+            case 'usage':
+              usage = event.usage;
+              break;
+            case 'message':
+              said.push(event.text);
+              yield event;
+              break;
+            case 'tool-call':
+              toolCalls.add(event.call.id);
+              yield event;
+              // A tool that ended may have written files.
+              if (event.call.status !== 'running') yield* files.readChanges();
+              break;
           }
-          if (event.kind === 'usage') {
-            usage = event.usage;
-            continue;
-          }
-          yield event;
-          if (event.kind === 'message') said.push(event.text);
-          if (event.kind !== 'tool-call') continue;
-          toolCalls.add(event.call.id);
-          // A tool that ended may have written files.
-          if (event.call.status !== 'running') yield* files.changes();
         }
         outcome ??= signal.aborted
           ? { status: 'cancelled' }
           : { status: 'failed', reason: 'The agent stopped without reporting a result.' };
       } catch (error) {
-        outcome = signal.aborted ? { status: 'cancelled' } : { status: 'failed', reason: reasonOf(error) };
+        outcome = signal.aborted
+          ? { status: 'cancelled' }
+          : { status: 'failed', reason: getErrorMessage(error) };
       }
       // An agent that stopped without error has not always done its task: a reviewer reads what it delivered. The
       // run's time is taken before the review, which is ours and not the agent's.
       let endedAt: number | undefined;
       if (outcome.status === 'succeeded') {
-        yield* files.changes();
+        yield* files.readChanges();
         endedAt = clock.now();
-        const work = { task, answer: said.join('\n\n'), files: files.paths(), toolCalls: toolCalls.size };
-        outcome = await reviewRun({ work, signal });
+        const work = { task, answer: said.join('\n\n'), files: files.getPaths(), toolCalls: toolCalls.size };
+        outcome = await reviewRun(work, signal);
         if (signal.aborted) outcome = { status: 'cancelled' };
       }
       // Nobody follows a cancelled run any more; any other run shows what it left and consumed, also when it failed.
       if (outcome.status !== 'cancelled') {
-        yield* files.changes();
+        yield* files.readChanges();
         const metrics = {
           model,
           durationMs: Math.round((endedAt ?? clock.now()) - startedAt),
           usage,
           toolCalls: toolCalls.size,
-          files: files.paths().length,
+          files: files.getPaths().length,
         };
         yield { kind: 'metrics', metrics };
       }

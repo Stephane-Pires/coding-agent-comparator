@@ -60,7 +60,7 @@ async function run(fake: ReturnType<typeof fakeSandbox>) {
   );
   const workspace = (await workspaces.create())._unsafeUnwrap();
   const signal = new AbortController().signal;
-  return { workspaces, workspace, events: agents['claude-code'].run({ task, workspace, signal }) };
+  return { workspaces, workspace, events: agents['claude-code'].run(task, workspace, signal) };
 }
 
 describe('sandboxRuntime', () => {

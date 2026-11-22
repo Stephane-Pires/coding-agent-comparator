@@ -24,7 +24,7 @@ function environment(): Record<string, string> {
 
 export function codexAgent({ model, apiKey }: CodexOptions): CodingAgent {
   return {
-    async *run({ task, workspace, signal }) {
+    async *run(task, workspace, signal) {
       const codex = new Codex({ env: environment(), ...(apiKey === undefined ? {} : { apiKey }) });
       const thread = codex.startThread({
         workingDirectory: workspace.path,
