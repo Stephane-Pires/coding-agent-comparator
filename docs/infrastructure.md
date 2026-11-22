@@ -107,14 +107,21 @@ flowchart TB
   codex --> openai
 ```
 
-|             | Dev machine              | Vercel                                   |
-| ----------- | ------------------------ | ---------------------------------------- |
-| API entry   | `src/main.ts`, on a port | `src/index.ts`, one Vercel Function      |
-| Agents run  | On the machine           | In sandboxes only                        |
-| Credentials | Keys or logins           | Keys only                                |
-| Password    | None                     | `DEMO_PASSWORD`, required to start       |
-| Longest run | No limit                 | 240 s, under a function's 300 s          |
-| Use         | No limit                 | 6 runs at once, 40 an hour, for everyone |
+| Part      | What it is                                                                                                           | Lives                                          |
+| --------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Web app   | Vercel project `coding-agent-comparator`, Next.js; forwards `/rpc` to the API with the pass cookie. Holds no secret. | Until the next deploy                          |
+| API       | Vercel project `coding-agent-comparator-server`: Hono in one Vercel Function (`apps/server/src/index.ts`)            | One request, 300 s at most                     |
+| Sandbox   | A Linux machine for one agent's run, created with `persistent: false`                                                | One run, 240 s at most, then stopped           |
+| Agent     | The version in Vercel's image, started by its own command                                                            | One run                                        |
+| Workspace | A folder inside the sandbox                                                                                          | Goes with the sandbox                          |
+| State     | None on the server; the browser keeps the pass cookie and the comparisons in memory                                  | A week for the pass; until reload for the rest |
+
+|             | Dev machine    | Vercel                                   |
+| ----------- | -------------- | ---------------------------------------- |
+| Credentials | Keys or logins | Keys only                                |
+| Password    | None           | `DEMO_PASSWORD`, required to start       |
+| Longest run | No limit       | 240 s, under a function's 300 s          |
+| Use         | No limit       | 6 runs at once, 40 an hour, for everyone |
 
 ### The password
 
@@ -127,13 +134,6 @@ after 1 s.
 No counter is stored: before each run, the API counts the project's sandboxes in Vercel's own list
 (`apps/server/src/runtimes/hosted.ts`). Approximate, and it lets the run go if the list cannot be read. The real cap
 on the bill is a spending limit on each key.
-
-### Three traps, already handled
-
-- **TypeScript entries.** `apps/server/vercel.json` ships the packages' `.ts` sources in the function.
-- **`@vercel/sandbox` pinned to 4.0.0.** Later versions fail in a function with `ERR_REQUIRE_ESM`.
-- **No agent SDK in the function** (250 MB at most; the agents weigh 700 MB). `tooling/hosted-entry.test.ts` guards
-  it.
 
 ### Setting it up
 
