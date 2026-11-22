@@ -107,14 +107,14 @@ flowchart TB
   codex --> openai
 ```
 
-| Part      | What it is                                                                                                           | Lives                                          |
-| --------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| Web app   | Vercel project `coding-agent-comparator`, Next.js; forwards `/rpc` to the API with the pass cookie. Holds no secret. | Until the next deploy                          |
-| API       | Vercel project `coding-agent-comparator-server`: Hono in one Vercel Function (`apps/server/src/index.ts`)            | One request, 300 s at most                     |
-| Sandbox   | A Linux machine for one agent's run, created with `persistent: false`                                                | One run, 240 s at most, then stopped           |
-| Agent     | The version in Vercel's image, started by its own command                                                            | One run                                        |
-| Workspace | A folder inside the sandbox                                                                                          | Goes with the sandbox                          |
-| State     | None on the server; the browser keeps the pass cookie and the comparisons in memory                                  | A week for the pass; until reload for the rest |
+| Part      | What it is                                                                                                                                         | Lives                                          |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Web app   | Vercel project `coding-agent-comparator`, Next.js, at `alpic.stephanepires.com`; forwards `/rpc` to the API with the pass cookie. Holds no secret. | Until the next deploy                          |
+| API       | Vercel project `coding-agent-comparator-server`: Hono in one Vercel Function (`apps/server/src/index.ts`)                                          | One request, 300 s at most                     |
+| Sandbox   | A Linux machine for one agent's run, created with `persistent: false`                                                                              | One run, 240 s at most, then stopped           |
+| Agent     | The version in Vercel's image, started by its own command                                                                                          | One run                                        |
+| Workspace | A folder inside the sandbox                                                                                                                        | Goes with the sandbox                          |
+| State     | None on the server; the browser keeps the pass cookie and the comparisons in memory                                                                | A week for the pass; until reload for the rest |
 
 |             | Dev machine    | Vercel                                   |
 | ----------- | -------------- | ---------------------------------------- |
@@ -145,3 +145,8 @@ on the bill is a spending limit on each key.
    | `coding-agent-comparator`        | `apps/web`     | Next.js   | `API_URL`: the API's address, no trailing slash        |
 
 2. Deploy the API, then the web app. `API_URL` is read at build: redeploy the web app after changing it.
+
+3. Give the web app its address: `vercel domains add alpic.stephanepires.com coding-agent-comparator`, then the
+   `CNAME` that `vercel domains verify alpic.stephanepires.com` asks for. The domain's DNS is in Route 53, kept by
+   Terraform outside this repository. The cookie and the forwarding need no change: the browser only talks to the
+   web app's address.

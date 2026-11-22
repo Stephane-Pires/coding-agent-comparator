@@ -4,7 +4,7 @@ Send one task to **Claude Code** and **Codex**, watch both runs live side by sid
 
 ![One task, both agents: their tracks on a shared time scale, each tool call, the files they wrote, then the numbers](docs/media/comparison.gif)
 
-**[Live app](https://coding-agent-comparator.vercel.app)** · **[API reference](https://coding-agent-comparator-server.vercel.app/docs)** · **[Architecture](docs/infrastructure.md)**
+**[Live app](https://alpic.stephanepires.com)** · **[API reference](https://coding-agent-comparator-server.vercel.app/docs)** · **[Architecture](docs/infrastructure.md)**
 
 ## Try it
 
