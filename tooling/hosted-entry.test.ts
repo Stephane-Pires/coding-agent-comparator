@@ -26,6 +26,13 @@ function workspaceFile(spec: string): string {
   return join(dir, target);
 }
 
+/** The file an import leads to: a relative one, or a workspace package's. Nothing for an external package. */
+function resolveImport(spec: string, from: string): string | undefined {
+  if (spec.startsWith('.')) return join(dirname(from), spec);
+  if (spec.startsWith(SCOPE)) return workspaceFile(spec);
+  return undefined;
+}
+
 /** Every external package reachable at run time from `file`, with the chain of files that leads to it. */
 function reachable(
   file: string,
@@ -37,11 +44,7 @@ function reachable(
   seen.add(file);
   const here = [...chain, file.slice(ROOT.length + 1)];
   for (const [, spec = ''] of readFileSync(file, 'utf8').matchAll(RUNTIME_IMPORT)) {
-    const next = spec.startsWith('.')
-      ? join(dirname(file), spec)
-      : spec.startsWith(SCOPE)
-        ? workspaceFile(spec)
-        : undefined;
+    const next = resolveImport(spec, file);
     if (next === undefined) found.set(spec, here);
     else if (existsSync(next)) for (const [k, v] of reachable(next, here, seen)) found.set(k, v);
   }

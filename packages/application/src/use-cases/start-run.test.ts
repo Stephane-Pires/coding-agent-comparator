@@ -27,11 +27,15 @@ const done: ReviewRun = () => Promise.resolve({ status: 'succeeded' });
 const asksBack: ReviewRun = () => Promise.resolve({ status: 'incomplete', reason: 'It asked a question.' });
 const refuses: CheckTask = () => Promise.resolve({ verdict: 'refused', reason: 'Not a coding task.' });
 
+interface SetupOptions {
+  readonly workspaces?: ReturnType<typeof inMemoryWorkspaces>;
+  readonly checkTask?: CheckTask;
+  readonly reviewRun?: ReviewRun;
+}
+
 function setup(
   steps: readonly Step[],
-  workspaces = inMemoryWorkspaces(),
-  checkTask = accepts,
-  reviewRun = done,
+  { workspaces = inMemoryWorkspaces(), checkTask = accepts, reviewRun = done }: SetupOptions = {},
 ) {
   const claude = scriptedAgent(steps);
   const codex = scriptedAgent([message('from codex'), succeeded]);
@@ -55,12 +59,7 @@ function setup(
 describe('startRun', () => {
   describe('the review of a run whose agent stopped without error', () => {
     it('ends the run as incomplete when the task was not done, with its totals', async () => {
-      const { all } = setup(
-        [message('What should it do?'), succeeded],
-        inMemoryWorkspaces(),
-        accepts,
-        asksBack,
-      );
+      const { all } = setup([message('What should it do?'), succeeded], { reviewRun: asksBack });
       const events = await all();
       expect(events.at(-1)).toEqual({
         kind: 'finished',
@@ -76,18 +75,16 @@ describe('startRun', () => {
         return Promise.resolve({ status: 'succeeded' });
       };
       const workspaces = inMemoryWorkspaces({ reads: [[file('a.mjs', '1')]] });
-      await setup(
-        [message('one'), call('succeeded'), message('two'), succeeded],
+      await setup([message('one'), call('succeeded'), message('two'), succeeded], {
         workspaces,
-        accepts,
-        watching,
-      ).all();
+        reviewRun: watching,
+      }).all();
       expect(seen).toEqual([{ task, answer: 'one\n\ntwo', files: ['a.mjs'], toolCalls: 1 }]);
     });
 
     it('does not count the review in the duration of the run', async () => {
       // The clock is read at the start and before the review: 750 ms apart, whatever the review takes.
-      const { metrics } = setup([succeeded], inMemoryWorkspaces(), accepts, asksBack);
+      const { metrics } = setup([succeeded], { reviewRun: asksBack });
       expect(await metrics()).toMatchObject([{ durationMs: 750 }]);
     });
 
@@ -97,13 +94,13 @@ describe('startRun', () => {
         seen.push(work);
         return Promise.resolve({ status: 'succeeded' });
       };
-      await setup([failed('boom')], inMemoryWorkspaces(), accepts, watching).all();
+      await setup([failed('boom')], { reviewRun: watching }).all();
       expect(seen).toHaveLength(0);
     });
   });
 
   it('starts nothing for a refused task: no workspace, no agent, and the reason as the failure', async () => {
-    const { all, claude, workspaces } = setup([message('one'), succeeded], inMemoryWorkspaces(), refuses);
+    const { all, claude, workspaces } = setup([message('one'), succeeded], { checkTask: refuses });
     expect(await all()).toEqual([failed('Not a coding task.')]);
     expect(claude.runs).toHaveLength(0);
     expect(workspaces.created).toHaveLength(0);
@@ -170,7 +167,9 @@ describe('startRun', () => {
   });
 
   it('fails the run, and starts no agent, when no workspace can be created', async () => {
-    const { claude, events } = setup([succeeded], inMemoryWorkspaces({ failWith: 'disk full' }));
+    const { claude, events } = setup([succeeded], {
+      workspaces: inMemoryWorkspaces({ failWith: 'disk full' }),
+    });
     expect(await events()).toEqual([failed('disk full')]);
     expect(claude.runs).toEqual([]);
   });
@@ -191,10 +190,9 @@ describe('startRun', () => {
       const a1 = file('a.mjs', '1');
       const a2 = file('a.mjs', '2');
       const b = file('src/b.mjs', 'b');
-      const { events } = setup(
-        [call('running'), call('succeeded'), message('done'), succeeded],
-        inMemoryWorkspaces({ reads: [[a1], [a2, b]] }),
-      );
+      const { events } = setup([call('running'), call('succeeded'), message('done'), succeeded], {
+        workspaces: inMemoryWorkspaces({ reads: [[a1], [a2, b]] }),
+      });
       expect(await events()).toEqual([
         call('running'),
         call('succeeded'),
@@ -208,13 +206,17 @@ describe('startRun', () => {
 
     it('yields a file once while it does not change', async () => {
       const a = file('a.mjs', '1');
-      const { events } = setup([call('succeeded'), succeeded], inMemoryWorkspaces({ reads: [[a]] }));
+      const { events } = setup([call('succeeded'), succeeded], {
+        workspaces: inMemoryWorkspaces({ reads: [[a]] }),
+      });
       expect(await events()).toEqual([call('succeeded'), changed(a), succeeded]);
     });
 
     it('yields a file that is gone once more, as deleted', async () => {
       const a = file('a.mjs', '1');
-      const { events } = setup([call('succeeded'), succeeded], inMemoryWorkspaces({ reads: [[a], []] }));
+      const { events } = setup([call('succeeded'), succeeded], {
+        workspaces: inMemoryWorkspaces({ reads: [[a], []] }),
+      });
       expect(await events()).toEqual([
         call('succeeded'),
         changed(a),
@@ -228,13 +230,13 @@ describe('startRun', () => {
       ['crashed', [{ throws: new Error('crash') }], failed('crash')],
     ])('still yields the files left by a run that %s', async (_label, steps, end) => {
       const a = file('a.mjs', '1');
-      const { events } = setup(steps, inMemoryWorkspaces({ reads: [[a]] }));
+      const { events } = setup(steps, { workspaces: inMemoryWorkspaces({ reads: [[a]] }) });
       expect(await events()).toEqual([changed(a), end]);
     });
 
     it('does not read the workspace of a cancelled run', async () => {
       const workspaces = inMemoryWorkspaces({ reads: [[file('a.mjs', '1')]] });
-      const { controller, run } = setup([message('one'), 'wait-for-abort'], workspaces);
+      const { controller, run } = setup([message('one'), 'wait-for-abort'], { workspaces });
       const seen: RunEvent[] = [];
       for await (const event of run('claude-code', task, controller.signal)) {
         seen.push(event);
@@ -274,7 +276,9 @@ describe('startRun', () => {
 
     it('counts the files the workspace holds at the end: a deleted file is not one', async () => {
       const reads = [[file('a.mjs', '1'), file('b.mjs', '2')], [file('b.mjs', '2')]];
-      const { metrics } = setup([call('succeeded'), succeeded], inMemoryWorkspaces({ reads }));
+      const { metrics } = setup([call('succeeded'), succeeded], {
+        workspaces: inMemoryWorkspaces({ reads }),
+      });
       expect(await metrics()).toMatchObject([{ files: 1 }]);
     });
 

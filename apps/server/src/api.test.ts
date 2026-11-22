@@ -10,12 +10,16 @@ const accepts: CheckTask = () => Promise.resolve({ verdict: 'accepted' });
 const done: ReviewRun = () => Promise.resolve({ status: 'succeeded' });
 const refuses: CheckTask = () => Promise.resolve({ verdict: 'refused', reason: 'Not a coding task.' });
 
+interface SetupOptions {
+  readonly workspaces?: ReturnType<typeof inMemoryWorkspaces>;
+  readonly checkTask?: CheckTask;
+  readonly reviewRun?: ReviewRun;
+  readonly password?: string;
+}
+
 function setup(
   claudeSteps: readonly Step[],
-  workspaces = inMemoryWorkspaces(),
-  checkTask = accepts,
-  reviewRun = done,
-  password?: string,
+  { workspaces = inMemoryWorkspaces(), checkTask = accepts, reviewRun = done, password }: SetupOptions = {},
 ) {
   const claude = scriptedAgent(claudeSteps);
   const codex = scriptedAgent([
@@ -63,7 +67,7 @@ describe('POST /api/tasks/check', () => {
     const accepted = await setup([]).post('/api/tasks/check', { task: 'write a script' });
     expect(accepted.status).toBe(200);
     expect(await accepted.json()).toEqual({ verdict: 'accepted' });
-    const refused = await setup([], inMemoryWorkspaces(), refuses).post('/api/tasks/check', {
+    const refused = await setup([], { checkTask: refuses }).post('/api/tasks/check', {
       task: 'a poem',
     });
     expect(await refused.json()).toEqual({ verdict: 'refused', reason: 'Not a coding task.' });
@@ -126,10 +130,9 @@ describe('POST /api/runs', () => {
 
   it('streams each file the run left as a data part with its path, before the outcome', async () => {
     const file = { path: 'src/hello.mjs', content: 'console.log(1);\n', state: 'complete' } as const;
-    const { post } = setup(
-      [{ kind: 'finished', outcome: { status: 'succeeded' } }],
-      inMemoryWorkspaces({ reads: [[file]] }),
-    );
+    const { post } = setup([{ kind: 'finished', outcome: { status: 'succeeded' } }], {
+      workspaces: inMemoryWorkspaces({ reads: [[file]] }),
+    });
     const response = await post('/api/runs', { agent: 'claude-code', task: 'say hi' });
     expect(await chunks(response)).toEqual([
       { type: 'start' },
@@ -203,23 +206,27 @@ describe('the API reference', () => {
 
 describe('a private API', () => {
   const PASSWORD = 'open sesame';
-  const { app } = setup([], inMemoryWorkspaces(), accepts, done, PASSWORD);
-  const call = (method: string, path: string, headers: Record<string, string> = {}, body?: unknown) =>
+  const { app } = setup([], { password: PASSWORD });
+  const call = (
+    method: string,
+    path: string,
+    { headers = {}, body }: { readonly headers?: Record<string, string>; readonly body?: unknown } = {},
+  ) =>
     app.request(path, {
       method,
       headers: { 'content-type': 'application/json', ...headers },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
   const check = (headers: Record<string, string>) =>
-    call('POST', '/api/tasks/check', headers, { task: 'write a script' });
+    call('POST', '/api/tasks/check', { headers, body: { task: 'write a script' } });
 
   it('refuses to check a task or start a run without the password, on both routes', async () => {
     expect((await check({})).status).toBe(401);
     expect((await check({ authorization: 'Bearer not the password' })).status).toBe(401);
     expect((await check({ cookie: 'comparator-pass=made-up' })).status).toBe(401);
-    const run = await call('POST', '/api/runs', {}, { agent: 'codex', task: 'write a script' });
+    const run = await call('POST', '/api/runs', { body: { agent: 'codex', task: 'write a script' } });
     expect(run.status).toBe(401);
-    const rpc = await call('POST', '/rpc/tasks/check', {}, { json: { task: 'write a script' } });
+    const rpc = await call('POST', '/rpc/tasks/check', { body: { json: { task: 'write a script' } } });
     expect(rpc.status).toBe(401);
   });
 
@@ -229,7 +236,7 @@ describe('a private API', () => {
 
   it('a wrong password is answered only after a wait, on the form and with a call', async () => {
     const started = performance.now();
-    await call('POST', '/api/access', {}, { password: 'a guess' });
+    await call('POST', '/api/access', { body: { password: 'a guess' } });
     expect(performance.now() - started).toBeGreaterThanOrEqual(WRONG_PASSWORD_WAIT_MS - 50);
     const again = performance.now();
     await check({ authorization: 'Bearer another guess' });
@@ -237,13 +244,13 @@ describe('a private API', () => {
   });
 
   it('a wrong password gives nothing', async () => {
-    const wrong = await call('POST', '/api/access', {}, { password: 'open sesame ' });
+    const wrong = await call('POST', '/api/access', { body: { password: 'open sesame ' } });
     expect(await wrong.json()).toEqual({ isAllowed: false });
     expect(wrong.headers.get('set-cookie')).toBeNull();
   });
 
   it('the right password gives a pass, which then opens the API', async () => {
-    const entered = await call('POST', '/api/access', {}, { password: PASSWORD });
+    const entered = await call('POST', '/api/access', { body: { password: PASSWORD } });
     expect(await entered.json()).toEqual({ isAllowed: true });
     const cookie = entered.headers.get('set-cookie') ?? '';
     // No script can read it, another site cannot use it, it is never sent in clear, and it does not hold the password.
@@ -252,7 +259,9 @@ describe('a private API', () => {
     expect(cookie).toMatch(/Secure/);
     expect(cookie).not.toContain(PASSWORD);
     const pass = cookie.split(';')[0] ?? '';
-    expect(await (await call('GET', '/api/access', { cookie: pass })).json()).toEqual({ isAllowed: true });
+    expect(await (await call('GET', '/api/access', { headers: { cookie: pass } })).json()).toEqual({
+      isAllowed: true,
+    });
     expect((await check({ cookie: pass })).status).toBe(200);
   });
 

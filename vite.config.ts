@@ -37,6 +37,17 @@ export default defineConfig({
       'no-await-in-loop': 'off',
       // A switch that covers every case returns from each of them: the compiler knows, this rule does not.
       'typescript/consistent-return': 'off',
+      // How code is written inside a file (the logbook post "I have an opinion").
+      'no-else-return': 'error',
+      'no-nested-ternary': 'error',
+      'no-use-before-define': 'error',
+      'prefer-const': 'error',
+      'max-params': ['error', { max: 3 }],
+      'import/no-default-export': 'error',
+      // A `default` is how a translator ignores the events a newer agent adds.
+      'typescript/switch-exhaustiveness-check': ['error', { considerDefaultExhaustiveForUnions: true }],
+      'typescript/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+      'typescript/no-unsafe-type-assertion': 'error',
     },
     overrides: [
       {
@@ -141,14 +152,35 @@ export default defineConfig({
       {
         // What shadcn and AI Elements generate: library code, kept close to the registry's version.
         files: ['packages/ui/src/components/ui/**', 'packages/ui/src/components/ai-elements/**'],
-        rules: { 'typescript/no-floating-promises': 'off', 'typescript/no-unsafe-type-assertion': 'off' },
+        rules: {
+          'typescript/no-floating-promises': 'off',
+          'typescript/no-unsafe-type-assertion': 'off',
+          'typescript/consistent-type-assertions': 'off',
+          'no-nested-ternary': 'off',
+          'no-else-return': 'off',
+          'no-use-before-define': 'off',
+          'max-params': 'off',
+        },
       },
       {
-        files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts'],
+        // Files a framework finds by their default export: Next.js routes, Storybook, configs, Vercel's entry.
+        files: [
+          'apps/web/src/app/**',
+          '**/*.stories.tsx',
+          '**/.storybook/**',
+          '**/*.config.ts',
+          '**/*.config.mjs',
+          'apps/server/src/index.ts',
+        ],
+        rules: { 'import/no-default-export': 'off' },
+      },
+      {
+        files: ['**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', 'tooling/**'],
         rules: {
           'typescript/no-non-null-assertion': 'off',
           // Tests load recorded JSON and build deliberately wrong values.
           'typescript/no-unsafe-type-assertion': 'off',
+          'typescript/consistent-type-assertions': 'off',
           // neverthrow names its test helper `_unsafeUnwrap`.
           'no-underscore-dangle': 'off',
         },

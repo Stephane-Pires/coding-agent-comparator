@@ -4,11 +4,11 @@ import { defineConfig, devices } from '@playwright/test';
 // recordings, `:live` on the real agents, `:sandbox` on them in Vercel Sandboxes, `:film` saves a video of each test.
 // What runs the tasks: recordings unless told otherwise.
 const runtime = process.env['E2E_RUNTIME'] ?? 'recorded';
-const live = runtime !== 'recorded';
+const isLive = runtime !== 'recorded';
 // Filmed for a person to watch afterwards: each action is followed by a pause, the recorded agents report their
 // steps slowly, and a video is kept (see tooling/e2e/app.spec.ts). No window is shown: a film of a visible window
 // depends on the screen and the window tools of whoever runs it.
-const filmed = process.env['E2E_FILM'] === '1';
+const isFilmed = process.env['E2E_FILM'] === '1';
 // The ports the tests start their own API and web app on. They are apart from a dev server's (3001 and 3100), so
 // both can run at once; set these two variables if something else already holds them.
 const API_PORT = process.env['E2E_API_PORT'] ?? '3011';
@@ -18,12 +18,18 @@ export const PASSWORD = 'a password for the tests';
 const API = `http://127.0.0.1:${API_PORT}`;
 const WEB = `http://127.0.0.1:${WEB_PORT}`;
 
+/** How long one test may take: a real agent takes its time, and a filmed recording is slowed down for a person. */
+function getTestTimeoutMs(): number {
+  if (isLive) return 300_000;
+  if (isFilmed) return 120_000;
+  return 30_000;
+}
+
 export default defineConfig({
   testDir: 'tooling/e2e',
   testMatch: '*.spec.ts',
-  // A real agent takes its time; a recording does not.
-  timeout: live ? 300_000 : filmed ? 120_000 : 30_000,
-  expect: { timeout: live ? 240_000 : 10_000 },
+  timeout: getTestTimeoutMs(),
+  expect: { timeout: isLive ? 240_000 : 10_000 },
   // One comparison at a time: the live agents share a machine and an account.
   workers: 1,
   reporter: [['list']],
@@ -31,9 +37,9 @@ export default defineConfig({
   use: {
     baseURL: WEB,
     trace: 'retain-on-failure',
-    launchOptions: { slowMo: filmed ? 700 : 0 },
+    launchOptions: { slowMo: isFilmed ? 700 : 0 },
     // A filmed run is recorded at the size of the page; any other run keeps a video only when it fails.
-    video: filmed ? { mode: 'on', size: { width: 1280, height: 720 } } : 'retain-on-failure',
+    video: isFilmed ? { mode: 'on', size: { width: 1280, height: 720 } } : 'retain-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
@@ -44,7 +50,7 @@ export default defineConfig({
         AGENT_RUNTIME: runtime,
         DEMO_PASSWORD: PASSWORD,
         // How far apart a recorded agent's steps are, for a person watching the film: slow enough to read.
-        ...(filmed ? { RECORDED_PACE_MS: '700' } : {}),
+        ...(isFilmed ? { RECORDED_PACE_MS: '700' } : {}),
       },
       url: `${API}/openapi.json`,
       reuseExistingServer: false,
