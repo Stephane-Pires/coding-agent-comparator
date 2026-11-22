@@ -3,13 +3,13 @@ import { join } from 'node:path';
 
 import { z } from 'zod';
 
-import { anthropicQuestions } from '@comparator/connector-anthropic-api';
+import { createAnthropicQuestions } from '@comparator/connector-anthropic-api';
 import {
-  claudeCodeAgent,
-  claudeCodeRunReviewer,
-  claudeCodeTaskClassifier,
+  createClaudeCodeAgent,
+  createClaudeCodeRunReviewer,
+  createClaudeCodeTaskClassifier,
 } from '@comparator/connector-claude-code';
-import { codexAgent } from '@comparator/connector-codex';
+import { createCodexAgent } from '@comparator/connector-codex';
 import { recordedRuntime, Recording } from '@comparator/runtime-recorded';
 import { localWorkspaces } from '@comparator/workspace-local';
 
@@ -29,10 +29,10 @@ export function questions(config: Config): Pick<Runtime, 'classifier' | 'reviewe
   const { model, apiKey } = config.taskCheck;
   return apiKey === undefined
     ? {
-        classifier: claudeCodeTaskClassifier({ model }),
-        reviewer: claudeCodeRunReviewer({ model }),
+        classifier: createClaudeCodeTaskClassifier(model),
+        reviewer: createClaudeCodeRunReviewer(model),
       }
-    : anthropicQuestions({ model, apiKey });
+    : createAnthropicQuestions(apiKey, model);
 }
 
 /**
@@ -43,8 +43,8 @@ export function machineRuntime(config: Config): Runtime {
   const runtimes = {
     local: (): Runtime => ({
       agents: {
-        'claude-code': claudeCodeAgent(config.claudeCode),
-        codex: codexAgent(config.codex),
+        'claude-code': createClaudeCodeAgent(config.claudeCode.model, config.claudeCode.apiKey),
+        codex: createCodexAgent(config.codex.model, config.codex.apiKey),
       },
       workspaces: localWorkspaces(),
       ...questions(config),

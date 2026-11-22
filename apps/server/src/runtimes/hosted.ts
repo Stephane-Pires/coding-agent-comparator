@@ -1,6 +1,6 @@
-import { anthropicQuestions } from '@comparator/connector-anthropic-api';
-import { claudeCodeCommandLine } from '@comparator/connector-claude-code/command-line';
-import { codexCommandLine } from '@comparator/connector-codex/command-line';
+import { createAnthropicQuestions } from '@comparator/connector-anthropic-api';
+import { createClaudeCodeCommandLine } from '@comparator/connector-claude-code/command-line';
+import { createCodexCommandLine } from '@comparator/connector-codex/command-line';
 import { sandboxRuntime } from '@comparator/runtime-sandbox';
 
 import type { Config } from '../config.ts';
@@ -33,11 +33,11 @@ export function hostedRuntime(config: Config): Runtime {
   return {
     ...sandboxRuntime(
       {
-        'claude-code': claudeCodeCommandLine(config.claudeCode),
-        codex: codexCommandLine(config.codex),
+        'claude-code': createClaudeCodeCommandLine(config.claudeCode.model, config.claudeCode.apiKey),
+        codex: createCodexCommandLine(config.codex.model, config.codex.apiKey),
       },
       { runLimitMs: RUN_LIMIT_MS, limits: LIMITS },
     ),
-    ...anthropicQuestions({ model, apiKey }),
+    ...createAnthropicQuestions(apiKey, model),
   };
 }

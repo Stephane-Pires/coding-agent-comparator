@@ -2,13 +2,11 @@ import { tmpdir } from 'node:os';
 
 import { query } from '@anthropic-ai/claude-agent-sdk';
 
-import { environment } from './environment.ts';
+import { followAbort } from './abort.ts';
+import { getEnvironment } from './environment.ts';
 
-export interface AskOptions {
+interface Question<Answer> {
   readonly model: string;
-}
-
-interface Question<Answer> extends AskOptions {
   readonly instructions: string;
   /** What is asked about: data for the model, never instructions. */
   readonly data: string;
@@ -25,17 +23,14 @@ interface Question<Answer> extends AskOptions {
  */
 export async function ask<Answer>(question: Question<Answer>): Promise<Answer> {
   const { model, instructions, data, schema, parse, signal } = question;
-  const abortController = new AbortController();
-  const abort = () => abortController.abort();
-  signal.addEventListener('abort', abort, { once: true });
-  if (signal.aborted) abort();
+  const { controller, stopFollowing } = followAbort(signal);
   try {
     const messages = query({
       prompt: data,
       options: {
         cwd: tmpdir(),
         // With a key the questions go to the API instead: here, Claude Code uses the login on the machine.
-        env: environment(undefined),
+        env: getEnvironment(undefined),
         model,
         systemPrompt: instructions,
         tools: [], // a question, not a job: nothing to read, write or run
@@ -43,7 +38,7 @@ export async function ask<Answer>(question: Question<Answer>): Promise<Answer> {
         settingSources: [],
         persistSession: false,
         permissionMode: 'dontAsk',
-        abortController,
+        abortController: controller,
       },
     });
     for await (const message of messages) {
@@ -53,6 +48,6 @@ export async function ask<Answer>(question: Question<Answer>): Promise<Answer> {
     }
     throw new Error('The question ended without an answer.');
   } finally {
-    signal.removeEventListener('abort', abort);
+    stopFollowing();
   }
 }

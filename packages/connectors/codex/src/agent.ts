@@ -4,17 +4,11 @@ import type { CodingAgent } from '@comparator/application';
 
 import { translate } from './translate.ts';
 
-interface CodexOptions {
-  readonly model: string;
-  /** Without a key, Codex uses the login already on the machine. */
-  readonly apiKey: string | undefined;
-}
-
 /**
  * The environment of the agent's process. The SDK inherits nothing once `env` is given, so `PATH` and `HOME`
  * are passed on here. Credentials come from the options only.
  */
-function environment(): Record<string, string> {
+function getEnvironment(): Record<string, string> {
   return Object.fromEntries(
     Object.entries(process.env).filter(
       (entry): entry is [string, string] => entry[1] !== undefined && !/^(OPENAI_|CODEX_)/.test(entry[0]),
@@ -22,10 +16,11 @@ function environment(): Record<string, string> {
   );
 }
 
-export function codexAgent({ model, apiKey }: CodexOptions): CodingAgent {
+/** Codex through its SDK. Without `apiKey`, it uses the login already on the machine. */
+export function createCodexAgent(model: string, apiKey: string | undefined): CodingAgent {
   return {
     async *run(task, workspace, signal) {
-      const codex = new Codex({ env: environment(), ...(apiKey === undefined ? {} : { apiKey }) });
+      const codex = new Codex({ env: getEnvironment(), ...(apiKey === undefined ? {} : { apiKey }) });
       const thread = codex.startThread({
         workingDirectory: workspace.path,
         skipGitRepoCheck: true, // the workspace is an empty folder, not a repository

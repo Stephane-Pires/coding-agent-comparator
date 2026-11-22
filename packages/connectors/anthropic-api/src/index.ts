@@ -12,14 +12,24 @@ import {
 } from '@comparator/application';
 import { RunReview, TaskAssessment } from '@comparator/domain';
 
-export interface AnthropicOptions {
-  readonly apiKey: string;
-  /** The model's full name, as the API knows it. */
-  readonly model: string;
-}
-
 /** The part of the SDK's client this adapter uses: one request whose answer is checked against a schema. */
 export type Messages = Pick<Anthropic['messages'], 'parse'>;
+
+interface Question<Schema extends z.ZodType> {
+  readonly model: string;
+  readonly instructions: string;
+  /** What is asked about: data for the model, never instructions. */
+  readonly data: string;
+  readonly schema: Schema;
+  readonly signal: AbortSignal;
+}
+
+/** Room for the model's own reasoning and one short sentence. */
+const MAX_ANSWER_TOKENS = 2048;
+
+/** A question is worth a short wait and one more try, not more: the use cases carry on without an answer. */
+const QUESTION_TIMEOUT_MS = 20_000;
+const QUESTION_RETRIES = 1;
 
 /**
  * Asks the model one question and returns its answer in the shape of `schema`. Throws when the request fails, when
@@ -27,21 +37,13 @@ export type Messages = Pick<Anthropic['messages'], 'parse'>;
  */
 async function ask<Schema extends z.ZodType>(
   messages: Messages,
-  question: {
-    readonly model: string;
-    readonly instructions: string;
-    /** What is asked about: data for the model, never instructions. */
-    readonly data: string;
-    readonly schema: Schema;
-    readonly signal: AbortSignal;
-  },
+  question: Question<Schema>,
 ): Promise<z.infer<Schema>> {
   const { model, instructions, data, schema, signal } = question;
   const response = await messages.parse(
     {
       model,
-      // Room for the model's own reasoning and one short sentence.
-      max_tokens: 2048,
+      max_tokens: MAX_ANSWER_TOKENS,
       system: instructions,
       messages: [{ role: 'user', content: data }],
       // A yes-or-no judgement on a few lines of text: the lightest effort is enough, and the quickest.
@@ -59,11 +61,13 @@ async function ask<Schema extends z.ZodType>(
 /**
  * The two questions about a task, asked to the Anthropic API directly: one request each, no agent and no process to
  * start. It is what answers them where Claude Code cannot run, and the quicker route wherever a key is set.
+ * `model` is the model's full name, as the API knows it.
  */
-export function anthropicQuestions(
-  { apiKey, model }: AnthropicOptions,
-  // A question is worth a short wait and one more try, not more: the use cases carry on without an answer.
-  messages: Messages = new Anthropic({ apiKey, timeout: 20_000, maxRetries: 1 }).messages,
+export function createAnthropicQuestions(
+  apiKey: string,
+  model: string,
+  messages: Messages = new Anthropic({ apiKey, timeout: QUESTION_TIMEOUT_MS, maxRetries: QUESTION_RETRIES })
+    .messages,
 ): { readonly classifier: TaskClassifier; readonly reviewer: RunReviewer } {
   return {
     classifier: {

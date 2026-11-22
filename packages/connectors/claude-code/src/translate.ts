@@ -15,22 +15,24 @@ const SYNTHETIC_MODEL = '<synthetic>';
 const HIDDEN_TOOLS = new Set(['ToolSearch']);
 /** The fields that say what a tool was pointed at, in the order they are looked for. */
 const INPUT_SUBJECTS = ['file_path', 'path', 'pattern', 'url', 'query'];
+/** The tools Claude Code edits files with, and what each does to a file unless its result says otherwise. */
+const FILE_TOOLS: Record<string, 'created' | 'modified'> = { Write: 'created', Edit: 'modified' };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
-const textOf = (value: unknown): string => (typeof value === 'string' ? value : '');
+const getText = (value: unknown): string => (typeof value === 'string' ? value : '');
 
 /** The text of a tool result: a string, or a list of blocks whose text parts are joined. */
-function resultText(content: unknown): string {
+function getResultText(content: unknown): string {
   if (typeof content === 'string') return content;
   if (!Array.isArray(content)) return '';
   return content
-    .flatMap((block) => (isRecord(block) && block['type'] === 'text' ? [textOf(block['text'])] : []))
+    .flatMap((block) => (isRecord(block) && block['type'] === 'text' ? [getText(block['text'])] : []))
     .join('\n');
 }
 
 /** The pages of a web search, read from the structured result: `{ results: [{ content: [{ title, url }] }] }`. */
-function webSources(structured: unknown): WebSource[] {
+function getWebSources(structured: unknown): WebSource[] {
   if (!isRecord(structured) || !Array.isArray(structured['results'])) return [];
   return structured['results']
     .flatMap((result: unknown) =>
@@ -43,14 +45,11 @@ function webSources(structured: unknown): WebSource[] {
     );
 }
 
-/** The tools Claude Code edits files with, and what each does to a file unless its result says otherwise. */
-const FILE_TOOLS: Record<string, 'created' | 'modified'> = { Write: 'created', Edit: 'modified' };
-
 /**
  * What a file tool's structured result adds to the call: whether `Write` replaced a file that existed
  * (`type: 'update'`), and the change as a unified diff, from `structuredPatch` (empty for a new file).
  */
-function fileEdit(tool: Extract<Tool, { type: 'file-edit' }>, structured: unknown): Tool {
+function getFileEdit(tool: Extract<Tool, { type: 'file-edit' }>, structured: unknown): Tool {
   if (!isRecord(structured)) return tool;
   const hunks: unknown[] = Array.isArray(structured['structuredPatch']) ? structured['structuredPatch'] : [];
   const lines: string[] = [];
@@ -58,7 +57,7 @@ function fileEdit(tool: Extract<Tool, { type: 'file-edit' }>, structured: unknow
     if (!isRecord(hunk) || !Array.isArray(hunk['lines'])) continue;
     const { oldStart, oldLines, newStart, newLines } = hunk;
     lines.push(`@@ -${String(oldStart)},${String(oldLines)} +${String(newStart)},${String(newLines)} @@`);
-    lines.push(...hunk['lines'].map(textOf));
+    lines.push(...hunk['lines'].map(getText));
   }
   const diff = lines.join('\n');
   return { ...tool, change: structured['type'] === 'update' ? 'modified' : tool.change, diff };
@@ -69,7 +68,7 @@ function fileEdit(tool: Extract<Tool, { type: 'file-edit' }>, structured: unknow
  * (`inputTokens`), and what it wrote to the cache apart again; `modelUsage` is the one to read, as `usage` covers
  * the main loop only. `total_cost_usd` is the cost at API prices, also on a subscription.
  */
-function usageOf(result: Extract<SDKMessage, { type: 'result' }>): Usage {
+function getUsage(result: Extract<SDKMessage, { type: 'result' }>): Usage {
   const models = Object.values(result.modelUsage);
   const sum = (count: (model: (typeof models)[number]) => number) =>
     models.reduce((total, model) => total + count(model), 0);
@@ -83,7 +82,7 @@ function usageOf(result: Extract<SDKMessage, { type: 'result' }>): Usage {
   };
 }
 
-const toolCall = (call: ToolCall): AgentEvent => ({ kind: 'tool-call', call });
+const toToolCallEvent = (call: ToolCall): AgentEvent => ({ kind: 'tool-call', call });
 
 /**
  * Translates Claude Code's stream into run events, for one run.
@@ -92,69 +91,75 @@ const toolCall = (call: ToolCall): AgentEvent => ({ kind: 'tool-call', call });
  * say what was called. The translator remembers the calls still running, so that each result becomes a complete
  * tool call. Everything else translates with no memory.
  *
- * Paths inside `workspacePath` are shown relative to it: the folder is temporary and its name means nothing.
+ * Paths inside `workspacePath` are shown toRelative to it: the folder is temporary and its name means nothing.
  */
 export function createTranslator(workspacePath: string): (message: SDKMessage) => AgentEvent[] {
   const running = new Map<string, Tool>();
-  const relative = (text: string) => text.replaceAll(`${workspacePath}/`, '');
+  const toRelative = (text: string) => text.replaceAll(`${workspacePath}/`, '');
 
-  const toolOf = (name: string, input: unknown): Tool => {
+  const getTool = (name: string, input: unknown): Tool => {
     const fields = isRecord(input) ? input : {};
-    if (name === 'Bash') return { type: 'command', command: relative(textOf(fields['command'])) };
-    if (name === 'WebSearch') return { type: 'web-search', query: textOf(fields['query']), sources: [] };
+    if (name === 'Bash') return { type: 'command', command: toRelative(getText(fields['command'])) };
+    if (name === 'WebSearch') return { type: 'web-search', query: getText(fields['query']), sources: [] };
     const change = FILE_TOOLS[name];
-    if (change) return { type: 'file-edit', path: relative(textOf(fields['file_path'])), change, diff: '' };
+    if (change)
+      return { type: 'file-edit', path: toRelative(getText(fields['file_path'])), change, diff: '' };
     const subject = INPUT_SUBJECTS.map((key) => fields[key]).find((value) => typeof value === 'string');
-    return { type: 'other', name, input: relative(textOf(subject) || JSON.stringify(fields)) };
+    return { type: 'other', name, input: toRelative(getText(subject) || JSON.stringify(fields)) };
   };
 
   return (message) => {
-    if (message.type === 'assistant') {
-      // A synthetic notice announces a failure: the `result` that follows carries the same text.
-      if (message.message.model === SYNTHETIC_MODEL) return [];
-      return message.message.content.flatMap((block): AgentEvent[] => {
-        if (block.type === 'text')
-          return block.text.trim() === '' ? [] : [{ kind: 'message', text: block.text }];
-        if (block.type !== 'tool_use' || HIDDEN_TOOLS.has(block.name)) return [];
-        const tool = toolOf(block.name, block.input);
-        running.set(block.id, tool);
-        return [toolCall({ id: block.id, tool, status: 'running', output: '' })];
-      });
-    }
-    if (message.type === 'user') {
-      const { content } = message.message;
-      if (typeof content === 'string') return [];
-      return content.flatMap((block): AgentEvent[] => {
-        if (block.type !== 'tool_result') return [];
-        const tool = running.get(block.tool_use_id);
-        if (!tool) return [];
-        running.delete(block.tool_use_id);
-        const status = block.is_error ? 'failed' : 'succeeded';
-        const call = (ended: Tool, output: string) => [
-          toolCall({ id: block.tool_use_id, tool: ended, status, output }),
+    switch (message.type) {
+      case 'assistant':
+        // A synthetic notice announces a failure: the `result` that follows carries the same text.
+        if (message.message.model === SYNTHETIC_MODEL) return [];
+        return message.message.content.flatMap((block): AgentEvent[] => {
+          if (block.type === 'text')
+            return block.text.trim() === '' ? [] : [{ kind: 'message', text: block.text }];
+          if (block.type !== 'tool_use' || HIDDEN_TOOLS.has(block.name)) return [];
+          const tool = getTool(block.name, block.input);
+          running.set(block.id, tool);
+          return [toToolCallEvent({ id: block.id, tool, status: 'running', output: '' })];
+        });
+      case 'user': {
+        const { content } = message.message;
+        if (typeof content === 'string') return [];
+        return content.flatMap((block): AgentEvent[] => {
+          if (block.type !== 'tool_result') return [];
+          const tool = running.get(block.tool_use_id);
+          if (!tool) return [];
+          running.delete(block.tool_use_id);
+          const status = block.is_error ? 'failed' : 'succeeded';
+          const toEndedCall = (ended: Tool, output: string) => [
+            toToolCallEvent({ id: block.tool_use_id, tool: ended, status, output }),
+          ];
+          // A search's result text is a dump of its links: the links are shown as sources instead.
+          if (tool.type === 'web-search')
+            return toEndedCall({ ...tool, sources: getWebSources(message.tool_use_result) }, '');
+          // An edit's result text only repeats the path; a failed one says why.
+          if (tool.type === 'file-edit')
+            return toEndedCall(
+              getFileEdit(tool, message.tool_use_result),
+              block.is_error ? getResultText(block.content) : '',
+            );
+          return toEndedCall(tool, getResultText(block.content));
+        });
+      }
+      case 'system':
+        // The first message of a run says which model answers: the full name, where the settings may hold an alias.
+        return message.subtype === 'init' ? [{ kind: 'model', model: message.model }] : [];
+      case 'result': {
+        // `subtype: 'success'` cannot be trusted alone: a refused model is a "success" with `is_error`.
+        const usage: AgentEvent = { kind: 'usage', usage: getUsage(message) };
+        if (!message.is_error) return [usage, { kind: 'finished', outcome: { status: 'succeeded' } }];
+        const reason = message.subtype === 'success' ? message.result : message.errors.join('\n');
+        return [
+          usage,
+          { kind: 'finished', outcome: { status: 'failed', reason: reason || message.subtype } },
         ];
-        // A search's result text is a dump of its links: the links are shown as sources instead.
-        if (tool.type === 'web-search')
-          return call({ ...tool, sources: webSources(message.tool_use_result) }, '');
-        // An edit's result text only repeats the path; a failed one says why.
-        if (tool.type === 'file-edit')
-          return call(
-            fileEdit(tool, message.tool_use_result),
-            block.is_error ? resultText(block.content) : '',
-          );
-        return call(tool, resultText(block.content));
-      });
+      }
+      default:
+        return [];
     }
-    // The first message of a run says which model answers: the full name, where the configuration may hold an alias.
-    if (message.type === 'system' && message.subtype === 'init')
-      return [{ kind: 'model', model: message.model }];
-    if (message.type === 'result') {
-      // `subtype: 'success'` cannot be trusted alone: a refused model is a "success" with `is_error`.
-      const usage: AgentEvent = { kind: 'usage', usage: usageOf(message) };
-      if (!message.is_error) return [usage, { kind: 'finished', outcome: { status: 'succeeded' } }];
-      const reason = message.subtype === 'success' ? message.result : message.errors.join('\n');
-      return [usage, { kind: 'finished', outcome: { status: 'failed', reason: reason || message.subtype } }];
-    }
-    return [];
   };
 }

@@ -8,7 +8,7 @@ import {
 } from '@comparator/application';
 import { Task } from '@comparator/domain';
 
-import { anthropicQuestions, type Messages } from './index.ts';
+import { createAnthropicQuestions, type Messages } from './index.ts';
 
 const task = Task.parse('write a function');
 const signal = new AbortController().signal;
@@ -22,10 +22,10 @@ function answering(parsed_output: unknown, stop_reason = 'end_turn') {
       return Promise.resolve({ parsed_output, stop_reason });
     },
   } as unknown as Messages;
-  return { requests, questions: anthropicQuestions({ apiKey: 'a-key', model: 'a-model' }, messages) };
+  return { requests, questions: createAnthropicQuestions('a-key', 'a-model', messages) };
 }
 
-describe('anthropicQuestions', () => {
+describe('createAnthropicQuestions', () => {
   it('asks whether a task is a coding task: the shared instructions, and the task as data', async () => {
     const assessment = { reason: 'A function.', isCodingTask: true, hasFileResult: true };
     const { requests, questions } = answering(assessment);

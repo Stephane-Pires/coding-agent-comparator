@@ -1,1 +1,1 @@
-export { codexAgent } from './agent.ts';
+export { createCodexAgent } from './agent.ts';

@@ -9,17 +9,12 @@ import { createTranslator } from './translate.ts';
 const isMessage = (line: unknown): line is SDKMessage =>
   typeof line === 'object' && line !== null && 'type' in line;
 
-interface CommandLineOptions {
-  readonly model: string;
-  readonly apiKey: string | undefined;
-}
-
 /**
  * Claude Code as a program started by a command, for where its SDK cannot start it: a machine other than ours.
  * `claude -p` with `stream-json` prints the very messages the SDK hands over, one per line, so the same translator
- * reads them. The options mirror those of `claudeCodeAgent`.
+ * reads them. The settings mirror those of `createClaudeCodeAgent`.
  */
-export function claudeCodeCommandLine({ model, apiKey }: CommandLineOptions) {
+export function createClaudeCodeCommandLine(model: string, apiKey: string | undefined) {
   return {
     command: (task: string) => ({
       cmd: 'claude',
@@ -43,8 +38,9 @@ export function claudeCodeCommandLine({ model, apiKey }: CommandLineOptions) {
     }),
     start(workspacePath: string) {
       const translate = createTranslator(workspacePath);
+      const first: AgentEvent[] = [];
       return {
-        first: [] as AgentEvent[],
+        first,
         translate: (line: unknown) => (isMessage(line) ? translate(line) : []),
       };
     },

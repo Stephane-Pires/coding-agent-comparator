@@ -1,3 +1,3 @@
-export { claudeCodeAgent } from './agent.ts';
-export { claudeCodeTaskClassifier } from './classifier.ts';
-export { claudeCodeRunReviewer } from './reviewer.ts';
+export { createClaudeCodeAgent } from './agent.ts';
+export { createClaudeCodeTaskClassifier } from './classifier.ts';
+export { createClaudeCodeRunReviewer } from './reviewer.ts';

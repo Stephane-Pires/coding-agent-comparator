@@ -5,6 +5,22 @@ import { countTokens, type AgentEvent, type ToolCall, type WebSource } from '@co
 /** Codex runs every command through a login shell: `/bin/zsh -lc "<the command>"`. */
 const SHELL_WRAPPER = /^\S*\b(?:zsh|bash|sh) -lc (['"])([\s\S]*)\1$/;
 
+/** What each kind of file change does to a file, in the domain's words. */
+const CHANGES = { add: 'created', update: 'modified', delete: 'deleted' } as const;
+
+/** Where a command stands, in the domain's words. */
+const COMMAND_STATUSES = {
+  in_progress: 'running',
+  completed: 'succeeded',
+  failed: 'failed',
+} as const satisfies Record<Extract<ThreadItem, { type: 'command_execution' }>['status'], ToolCall['status']>;
+
+/** How an ended file change went, in the domain's words. */
+const FILE_CHANGE_STATUSES = {
+  completed: 'succeeded',
+  failed: 'failed',
+} as const satisfies Record<Extract<ThreadItem, { type: 'file_change' }>['status'], ToolCall['status']>;
+
 /** The command the agent meant, without the shell that carried it. */
 export function unwrapCommand(commandLine: string): string {
   const match = SHELL_WRAPPER.exec(commandLine);
@@ -15,7 +31,7 @@ export function unwrapCommand(commandLine: string): string {
 }
 
 /** The pages of a web search. The SDK's types leave them out; the events carry `results: [{ title, url }]`. */
-function webSources(item: object): WebSource[] {
+function getWebSources(item: object): WebSource[] {
   const results: unknown = 'results' in item ? item.results : undefined;
   if (!Array.isArray(results)) return [];
   return results.flatMap((page: unknown) =>
@@ -30,14 +46,12 @@ function webSources(item: object): WebSource[] {
   );
 }
 
-const CHANGES = { add: 'created', update: 'modified', delete: 'deleted' } as const;
-
 /**
  * Codex ends its answers with links to the files it wrote, by their full path: `[main.mjs](/tmp/…/main.mjs)`.
  * The workspace is temporary, so such a link leads nowhere: it becomes the file's name, and any other mention of
  * the workspace's path is dropped. The files themselves are shown from the workspace.
  */
-function withoutWorkspace(text: string, workspacePath: string): string {
+function removeWorkspacePath(text: string, workspacePath: string): string {
   const path = workspacePath.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
   const links = new RegExp(String.raw`\[([^\]]*)\]\(${path}/[^)]*\)`, 'g');
   return text
@@ -46,10 +60,9 @@ function withoutWorkspace(text: string, workspacePath: string): string {
 }
 
 /** The tool calls of this item as they stand, or none for the items that are not tool calls. */
-function toolCalls(item: ThreadItem, ended: boolean, workspacePath: string): ToolCall[] {
+function getToolCalls(item: ThreadItem, isEnded: boolean, workspacePath: string): ToolCall[] {
   if (item.type === 'command_execution') {
-    const status =
-      item.status === 'in_progress' ? 'running' : item.status === 'completed' ? 'succeeded' : 'failed';
+    const status = COMMAND_STATUSES[item.status];
     return [
       {
         id: item.id,
@@ -60,11 +73,11 @@ function toolCalls(item: ThreadItem, ended: boolean, workspacePath: string): Too
     ];
   }
   if (item.type === 'web_search') {
-    const tool = { type: 'web-search' as const, query: item.query, sources: webSources(item) };
-    return [{ id: item.id, tool, status: ended ? 'succeeded' : 'running', output: '' }];
+    const tool = { type: 'web-search' as const, query: item.query, sources: getWebSources(item) };
+    return [{ id: item.id, tool, status: isEnded ? 'succeeded' : 'running', output: '' }];
   }
   if (item.type === 'file_change') {
-    const status = !ended ? 'running' : item.status === 'failed' ? 'failed' : 'succeeded';
+    const status = isEnded ? FILE_CHANGE_STATUSES[item.status] : 'running';
     // One item can change several files: each is its own call. Codex gives the paths, not the content.
     return item.changes.map((change) => ({
       id: `${item.id}:${change.path}`,
@@ -93,12 +106,12 @@ export function translate(event: ThreadEvent, workspacePath: string): AgentEvent
     case 'item.started':
     case 'item.updated':
     case 'item.completed': {
-      const ended = event.type === 'item.completed';
+      const isEnded = event.type === 'item.completed';
       if (event.item.type === 'agent_message')
-        return ended && event.item.text.trim() !== ''
-          ? [{ kind: 'message', text: withoutWorkspace(event.item.text, workspacePath) }]
+        return isEnded && event.item.text.trim() !== ''
+          ? [{ kind: 'message', text: removeWorkspacePath(event.item.text, workspacePath) }]
           : [];
-      return toolCalls(event.item, ended, workspacePath).map((call) => ({ kind: 'tool-call', call }));
+      return getToolCalls(event.item, isEnded, workspacePath).map((call) => ({ kind: 'tool-call', call }));
     }
     case 'turn.completed': {
       // Codex includes cached input in `input_tokens`, and reports no cost.

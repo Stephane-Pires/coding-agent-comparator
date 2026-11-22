@@ -8,17 +8,12 @@ import { translate } from './translate.ts';
 const isEvent = (line: unknown): line is ThreadEvent =>
   typeof line === 'object' && line !== null && 'type' in line;
 
-interface CommandLineOptions {
-  readonly model: string;
-  readonly apiKey: string | undefined;
-}
-
 /**
  * Codex as a program started by a command, for where its SDK cannot start it: a machine other than ours.
  * `codex exec --json` prints the very events the SDK hands over, one per line, so the same translator reads them.
- * The options mirror those of `codexAgent`.
+ * The settings mirror those of `createCodexAgent`.
  */
-export function codexCommandLine({ model, apiKey }: CommandLineOptions) {
+export function createCodexCommandLine(model: string, apiKey: string | undefined) {
   return {
     command: (task: string) => ({
       cmd: 'codex',
