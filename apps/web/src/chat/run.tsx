@@ -1,9 +1,10 @@
 'use client';
 
 import { useChat, type Chat } from '@ai-sdk/react';
+import type { ChatStatus } from 'ai';
 import { useEffect, useState } from 'react';
 
-import type { AgentId, RunStatus } from '@comparator/contracts';
+import type { AgentId, RunOutcome, RunStatus } from '@comparator/contracts';
 import type { RunResult } from '@comparator/ui/components/comparison-metrics';
 import { RunColumn, type RunItem } from '@comparator/ui/components/run-column';
 import type { RunTrack } from '@comparator/ui/components/run-tracks';
@@ -13,6 +14,24 @@ import type { RunMessage } from '../lib/run-chat.ts';
 /** Shown when the stream itself broke: the API is down, or the connection was lost. */
 const UNREACHABLE =
   'The run could not be followed: the API did not answer. Check that it is running, then send again.';
+
+/**
+ * Where a run stands when its stream has said no outcome: one that ends without one was stopped by the user, and
+ * one that breaks never reached the API.
+ */
+const STATUS_WITHOUT_OUTCOME: Record<ChatStatus, RunStatus> = {
+  submitted: 'running',
+  streaming: 'running',
+  ready: 'cancelled',
+  error: 'failed',
+};
+
+/** Why a run did not finish: the outcome's reason, or that the stream broke. */
+function getReason(outcome: RunOutcome | undefined, stream: ChatStatus): string | undefined {
+  if (outcome?.status === 'failed' || outcome?.status === 'incomplete') return outcome.reason;
+  if (stream === 'error') return UNREACHABLE;
+  return undefined;
+}
 
 /**
  * One agent's run, followed live. Tells its parent once, when the run is over: how it ended, and its totals. And
@@ -50,21 +69,14 @@ export function Run({
   // The totals arrive just before the outcome: they are there when the run settles.
   const metrics = parts.find((part) => part.type === 'data-metrics')?.data;
 
-  // A stream that ends with no outcome was stopped by the user; one that breaks never reached the API.
-  const status: RunStatus =
-    outcome?.status ?? (stream === 'error' ? 'failed' : stream === 'ready' ? 'cancelled' : 'running');
-  const reason =
-    outcome?.status === 'failed' || outcome?.status === 'incomplete'
-      ? outcome.reason
-      : stream === 'error'
-        ? UNREACHABLE
-        : undefined;
+  const status = outcome?.status ?? STATUS_WITHOUT_OUTCOME[stream];
+  const reason = getReason(outcome, stream);
 
-  const settled = status !== 'running';
+  const isSettled = status !== 'running';
   useEffect(() => {
     // Once, when the run settles: its status and totals do not change after that.
-    if (settled) onSettled({ agent, status, metrics });
-  }, [settled, onSettled]);
+    if (isSettled) onSettled({ agent, status, metrics });
+  }, [isSettled, onSettled]);
 
   // When each tool call was first seen, and when the run ended: the browser's own times, since the stream carries
   // none. They place the gates and the end of the track; the duration shown is the API's.
@@ -82,8 +94,8 @@ export function Run({
     });
   }, [callIds, clock]);
   useEffect(() => {
-    if (settled) setEndedAt(clock());
-  }, [settled, clock]);
+    if (isSettled) setEndedAt(clock());
+  }, [isSettled, clock]);
   const track: RunTrack = {
     agent,
     status,

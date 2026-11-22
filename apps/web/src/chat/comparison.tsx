@@ -62,10 +62,10 @@ export function Comparison({
   );
   // In the order of the columns, whichever run ended first.
   const ordered = runs.flatMap(({ agent }) => results.filter((result) => result.agent === agent));
-  const ended = ordered.length === runs.length;
+  const hasEveryRunEnded = ordered.length === runs.length;
 
   // Where each run stands on its track, as each run reports it; the clock they share ticks until all have ended.
-  const { now, read } = useClock(startedAt, !ended);
+  const { now, read } = useClock(startedAt, !hasEveryRunEnded);
   const [tracks, setTracks] = useState<ReadonlyMap<AgentId, RunTrack>>(new Map());
   const onTrack = useCallback(
     (track: RunTrack) => setTracks((previous) => new Map(previous).set(track.agent, track)),
@@ -83,9 +83,9 @@ export function Comparison({
       }
       summary={
         <>
-          {ended ? <ComparisonMetrics runs={ordered} /> : null}
+          {hasEveryRunEnded ? <ComparisonMetrics runs={ordered} /> : null}
           {/* It snows once when every agent finished: not for a run that failed or was stopped. */}
-          {ended && ordered.every(({ status }) => status === 'succeeded') ? <Snowfall /> : null}
+          {hasEveryRunEnded && ordered.every(({ status }) => status === 'succeeded') ? <Snowfall /> : null}
         </>
       }
     >

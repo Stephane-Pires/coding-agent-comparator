@@ -23,7 +23,7 @@ const dollars = new Intl.NumberFormat('en-US', {
 
 const NOT_REPORTED = <span className="text-muted-foreground">Not reported</span>;
 
-function inputTokens({ usage }: Metrics): ReactNode {
+function getInputTokens({ usage }: Metrics): ReactNode {
   if (!usage) return NOT_REPORTED;
   const cached =
     usage.inputTokens === 0 ? 0 : Math.round((usage.cachedInputTokens / usage.inputTokens) * 100);
@@ -41,7 +41,7 @@ function inputTokens({ usage }: Metrics): ReactNode {
 const ROWS: readonly { label: string; value: (metrics: Metrics) => ReactNode }[] = [
   { label: 'Model', value: ({ model }) => model ?? NOT_REPORTED },
   { label: 'Duration', value: (metrics) => `${seconds.format(metrics.durationMs / 1000)} s` },
-  { label: 'Input tokens', value: inputTokens },
+  { label: 'Input tokens', value: getInputTokens },
   {
     label: 'Output tokens',
     value: ({ usage }) => (usage ? integer.format(usage.outputTokens) : NOT_REPORTED),
@@ -60,7 +60,7 @@ const ROWS: readonly { label: string; value: (metrics: Metrics) => ReactNode }[]
  * come from different tokenizers, cost is not reported by every agent, and more tool calls or files is neither
  * better nor worse.
  */
-export function fastestOf(
+export function getFastest(
   runs: readonly { agent: AgentId; status: RunStatus; durationMs?: number | undefined }[],
 ): AgentId | undefined {
   const done = runs.flatMap(({ agent, status, durationMs }) =>
@@ -72,7 +72,7 @@ export function fastestOf(
 
 /** The runs of one comparison in numbers: one row per metric, one column per agent. */
 export function ComparisonMetrics({ runs }: { runs: readonly RunResult[] }) {
-  const fastest = fastestOf(runs.map((run) => ({ ...run, durationMs: run.metrics?.durationMs })));
+  const fastest = getFastest(runs.map((run) => ({ ...run, durationMs: run.metrics?.durationMs })));
   return (
     <div className="overflow-x-auto rounded-lg border bg-card">
       <table className="w-full text-left text-sm">

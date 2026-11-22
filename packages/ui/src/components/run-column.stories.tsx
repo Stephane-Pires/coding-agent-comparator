@@ -12,14 +12,13 @@ console.log('hi');
 It printed **hi**.`;
 
 const message = (id: string, text: string): RunItem => ({ type: 'message', id, text });
-const command = (
-  id: string,
-  text: string,
-  output: string,
-  status: 'running' | 'succeeded' = 'succeeded',
-): RunItem => ({
+const command = (id: string, text: string, output: string): RunItem => ({
   type: 'tool-call',
-  call: { id, tool: { type: 'command', command: text }, status, output },
+  call: { id, tool: { type: 'command', command: text }, status: 'succeeded', output },
+});
+const runningCommand = (id: string, text: string): RunItem => ({
+  type: 'tool-call',
+  call: { id, tool: { type: 'command', command: text }, status: 'running', output: '' },
 });
 
 const meta = {
@@ -63,7 +62,7 @@ export const Working: Story = {
           output: '',
         },
       },
-      command('c1', 'node hello.mjs', '', 'running'),
+      runningCommand('c1', 'node hello.mjs'),
     ],
   },
 };

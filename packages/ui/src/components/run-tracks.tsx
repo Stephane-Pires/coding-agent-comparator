@@ -2,9 +2,9 @@ import { useEffect, useRef, useState, type CSSProperties, type UIEvent, type Whe
 
 import type { AgentId, RunStatus, Tool, ToolCall } from '@comparator/contracts';
 import { AGENT_LABELS } from '@comparator/ui/agents';
-import { fastestOf, seconds } from '@comparator/ui/components/comparison-metrics';
+import { getFastest, seconds } from '@comparator/ui/components/comparison-metrics';
 import { RUN_STATUSES } from '@comparator/ui/components/run-status-badge';
-import { STATUSES, titleOf } from '@comparator/ui/components/tool-call-row';
+import { TOOL_CALL_STATUSES, getTitle } from '@comparator/ui/components/tool-call-row';
 import {
   Tooltip,
   TooltipContent,
@@ -41,30 +41,50 @@ export interface RunTrack {
 const PX_PER_SECOND = 28;
 /** The course drawn ahead of the furthest run, so a track is never seen touching the edge. */
 const AHEAD_MS = 2000;
-const TICK_EVERY_S = 5;
+const TICK_EVERY_SECONDS = 5;
+/**
+ * How fast the slope glides to follow the runs: at least a little faster than the tracks grow, and faster still
+ * when the end is far, so it catches up without a jump.
+ */
+const GLIDE_MIN_PX_PER_SECOND = PX_PER_SECOND * 1.5;
+/** The share of the distance left that the glide covers in a second. */
+const GLIDE_CATCH_UP_PER_SECOND = 6;
+const TRACK_ROW = 'flex h-6 items-center';
+/** A gate's look: hollow while its call runs, filled once done, grey when it failed. */
+const GATE_STYLES: Record<ToolCall['status'], string> = {
+  running: 'border-brand bg-card',
+  succeeded: 'border-brand bg-brand',
+  failed: 'border-muted-foreground bg-muted-foreground',
+};
 
 /**
  * How far the course is drawn, in milliseconds: to the furthest point any run reached, and a little ahead while
  * one still lasts.
  */
-export function courseLength(now: number, endedAt: readonly (number | undefined)[]): number {
-  const running = endedAt.some((end) => end === undefined);
-  const furthest = Math.max(running ? now : 0, ...endedAt.map((end) => end ?? 0));
-  return furthest + (running ? AHEAD_MS : 0);
+export function getCourseLength(now: number, endedAt: readonly (number | undefined)[]): number {
+  const isRunning = endedAt.some((end) => end === undefined);
+  const furthest = Math.max(isRunning ? now : 0, ...endedAt.map((end) => end ?? 0));
+  return furthest + (isRunning ? AHEAD_MS : 0);
 }
 
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
+const pluralize = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
 /** A run in words, for who cannot see its track: in the words of its badge. */
-function inWords({ agent, status, gates, durationMs }: RunTrack): string {
-  const calls = plural(gates.length, 'tool call');
+function describeTrack({ agent, status, gates, durationMs }: RunTrack): string {
+  const calls = pluralize(gates.length, 'tool call');
   if (status === 'running') return `${AGENT_LABELS[agent]}: running, ${calls} so far.`;
   const time = durationMs === undefined ? '' : ` in ${seconds.format(durationMs / 1000)} seconds`;
   return `${AGENT_LABELS[agent]}: ${RUN_STATUSES[status].label.toLowerCase()}${time}, ${calls}.`;
 }
 
-const px = (time: number) => (time / 1000) * PX_PER_SECOND;
-const ROW = 'flex h-6 items-center';
+const toPixels = (time: number) => (time / 1000) * PX_PER_SECOND;
+
+/** The icon at the end of a track: a flag for a run that finished, its status icon for any other end. */
+function getEndIcon(status: RunStatus) {
+  if (status === 'running') return null;
+  if (status === 'succeeded') return ICONS.finish;
+  return ICONS.run[status];
+}
 
 /**
  * A gate: where a tool call started. Hollow while the call runs, filled once done, grey when it failed. Pointed
@@ -72,9 +92,9 @@ const ROW = 'flex h-6 items-center';
  * is where a keyboard or a screen reader finds it.
  */
 function Gate({ gate, style }: { gate: TrackGate; style: CSSProperties }) {
-  const { text, code, before } = titleOf(gate.tool);
+  const { text, isCode, before } = getTitle(gate.tool);
   const ToolIcon = ICONS.tool[gate.tool.type];
-  const { label, tone } = STATUSES[gate.status];
+  const { label, tone } = TOOL_CALL_STATUSES[gate.status];
   return (
     <Tooltip>
       {/* larger than the mark it holds, so it is easy to point at */}
@@ -85,13 +105,7 @@ function Gate({ gate, style }: { gate: TrackGate; style: CSSProperties }) {
         >
           <span
             // A halo of the card's colour parts the gate from the line it stands on, which has its colour.
-            className={`size-2.5 rotate-45 border-2 ring-2 ring-card ${
-              gate.status === 'failed'
-                ? 'border-muted-foreground bg-muted-foreground'
-                : gate.status === 'running'
-                  ? 'border-brand bg-card'
-                  : 'border-brand bg-brand'
-            }`}
+            className={`size-2.5 rotate-45 border-2 ring-2 ring-card ${GATE_STYLES[gate.status]}`}
           />
         </span>
       </TooltipTrigger>
@@ -103,7 +117,7 @@ function Gate({ gate, style }: { gate: TrackGate; style: CSSProperties }) {
         <span className="flex items-center gap-2">
           <ToolIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
           {before ? <span className="shrink-0">{before}</span> : null}
-          <span className={`line-clamp-3 min-w-0 break-all ${code ? 'font-mono' : ''}`}>{text}</span>
+          <span className={`line-clamp-3 min-w-0 break-all ${isCode ? 'font-mono' : ''}`}>{text}</span>
         </span>
       </TooltipContent>
     </Tooltip>
@@ -113,31 +127,30 @@ function Gate({ gate, style }: { gate: TrackGate; style: CSSProperties }) {
 /** One run on the course: the part of the track it has skied, its gates, and where it stands or ended. */
 function Track({ track, now }: { track: RunTrack; now: number }) {
   const { status, gates, endedAt } = track;
-  // A mark stands at its time by being moved, not laid out again.
-  const at = (time: number, centred = true) => ({
-    translate: `calc(${px(time)}px${centred ? ' - 50%' : ''}) -50%`,
-  });
+  // A mark stands at its time by being moved, not laid out again: centred on it, or starting from it.
+  const centreAt = (time: number) => ({ translate: `calc(${toPixels(time)}px - 50%) -50%` });
+  const startAt = (time: number) => ({ translate: `${toPixels(time)}px -50%` });
   // Where the track ends: at its end once the run is over. While it lasts, at the clock, or at its
   // last gate if that one came since the clock last ticked: a gate is never ahead of its track.
   const head = endedAt ?? Math.max(now, ...gates.map((gate) => gate.at));
-  const EndIcon = status === 'succeeded' ? ICONS.finish : status !== 'running' ? ICONS.run[status] : null;
+  const EndIcon = getEndIcon(status);
   return (
-    <div className={`${ROW} relative`}>
+    <div className={`${TRACK_ROW} relative`}>
       {/* the course ahead, then the part of it already skied */}
       <span className="run-course" />
-      <span className="run-track" style={{ clipPath: `inset(0 calc(100% - ${px(head)}px) 0 0)` }} />
+      <span className="run-track" style={{ clipPath: `inset(0 calc(100% - ${toPixels(head)}px) 0 0)` }} />
       {/* a gate per tool call: hollow while it runs, filled once done, grey when it failed */}
       {gates.map((gate) => (
-        <Gate key={gate.id} gate={gate} style={at(gate.at)} />
+        <Gate key={gate.id} gate={gate} style={centreAt(gate.at)} />
       ))}
       {status === 'running' ? (
         <span
           className="run-mark absolute top-1/2 left-0 size-3 rounded-full border-2 border-brand bg-card"
-          style={at(head)}
+          style={centreAt(head)}
         />
       ) : null}
       {EndIcon ? (
-        <span className="run-mark run-arrival absolute top-1/2 left-0 bg-card pl-1" style={at(head, false)}>
+        <span className="run-mark run-arrival absolute top-1/2 left-0 bg-card pl-1" style={startAt(head)}>
           <EndIcon className={`size-4 ${status === 'succeeded' ? 'text-brand' : 'text-muted-foreground'}`} />
         </span>
       ) : null}
@@ -155,51 +168,50 @@ function Track({ track, now }: { track: RunTrack; now: number }) {
  * `now` is the clock of the comparison, in milliseconds since it started; whoever renders this makes it tick.
  */
 export function RunTracks({ tracks, now }: { tracks: readonly RunTrack[]; now: number }) {
-  const fastest = fastestOf(tracks);
-  const length = courseLength(
+  const fastest = getFastest(tracks);
+  const length = getCourseLength(
     now,
     tracks.map(({ endedAt }) => endedAt),
   );
   const ticks = Array.from(
-    { length: Math.floor(length / 1000 / TICK_EVERY_S) + 1 },
-    (_, tick) => tick * TICK_EVERY_S,
+    { length: Math.floor(length / 1000 / TICK_EVERY_SECONDS) + 1 },
+    (_, tick) => tick * TICK_EVERY_SECONDS,
   );
 
   // The slope follows the furthest run. It stops when the person scrolls it sideways themselves, and follows again
   // once they bring it back to its end. Scrolling the page up and down over it changes nothing.
   const slope = useRef<HTMLDivElement>(null);
-  const [followed, setFollowed] = useState(true);
-  const edge = px(length);
+  const [isFollowing, setIsFollowing] = useState(true);
+  const edge = toPixels(length);
   useEffect(() => {
     const view = slope.current;
-    if (!view || !followed) return undefined;
+    if (!view || !isFollowing) return undefined;
     const end = () => edge - view.clientWidth;
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
       if (end() > view.scrollLeft) view.scrollLeft = end();
       return undefined;
     }
-    // A glide, drawn every frame: at the pace the tracks grow when the end is near, faster when it is far, so
-    // the slope catches up without a jump. The position is kept here, since the browser rounds the one it holds.
+    // A glide, drawn every frame. The position is kept here, since the browser rounds the one it holds.
     let position = view.scrollLeft;
     let last = performance.now();
     let frame = requestAnimationFrame(function glide(time: number) {
       const gap = end() - position;
       if (gap <= 0) return;
-      const pace = Math.max(PX_PER_SECOND * 1.5, gap * 6);
+      const pace = Math.max(GLIDE_MIN_PX_PER_SECOND, gap * GLIDE_CATCH_UP_PER_SECOND);
       position += Math.min(gap, (pace * (time - last)) / 1000);
       last = time;
       view.scrollLeft = position;
       frame = requestAnimationFrame(glide);
     });
     return () => cancelAnimationFrame(frame);
-  }, [edge, followed]);
+  }, [edge, isFollowing]);
   const onWheel = (event: WheelEvent) => {
-    if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) setFollowed(false);
+    if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) setIsFollowing(false);
   };
   const onScroll = ({ currentTarget: view }: UIEvent<HTMLDivElement>) => {
-    if (view.scrollLeft + view.clientWidth >= view.scrollWidth - PX_PER_SECOND) setFollowed(true);
+    if (view.scrollLeft + view.clientWidth >= view.scrollWidth - PX_PER_SECOND) setIsFollowing(true);
   };
-  const takeOver = () => setFollowed(false);
+  const takeOver = () => setIsFollowing(false);
 
   return (
     <TooltipProvider delayDuration={100}>
@@ -209,8 +221,8 @@ export function RunTracks({ tracks, now }: { tracks: readonly RunTrack[]; now: n
           {tracks.map((track) => {
             const AgentIcon = ICONS.agent[track.agent];
             return (
-              <li key={track.agent} className={`${ROW} gap-2`}>
-                <span className="sr-only">{inWords(track)}</span>
+              <li key={track.agent} className={`${TRACK_ROW} gap-2`}>
+                <span className="sr-only">{describeTrack(track)}</span>
                 <AgentIcon aria-hidden="true" className="size-4 shrink-0" />
                 {/* In a narrow block the icon alone names the agent: the room goes to the tracks. */}
                 <span aria-hidden="true" className="hidden @lg:inline">
@@ -240,7 +252,11 @@ export function RunTracks({ tracks, now }: { tracks: readonly RunTrack[]; now: n
             {/* the scale: a mark every five seconds */}
             <p className="relative h-4 text-xs text-muted-foreground tabular-nums">
               {ticks.map((tick) => (
-                <span key={tick} className="absolute left-0" style={{ translate: `${px(tick * 1000)}px` }}>
+                <span
+                  key={tick}
+                  className="absolute left-0"
+                  style={{ translate: `${toPixels(tick * 1000)}px` }}
+                >
                   {tick} s
                 </span>
               ))}
@@ -250,7 +266,7 @@ export function RunTracks({ tracks, now }: { tracks: readonly RunTrack[]; now: n
         {/* Its width is kept from the start: a time that arrives takes no room from the tracks. */}
         <ul aria-hidden="true" className="flex w-28 shrink-0 flex-col gap-2 text-right tabular-nums">
           {tracks.map(({ agent, status, durationMs }) => (
-            <li key={agent} className={`${ROW} justify-end`}>
+            <li key={agent} className={`${TRACK_ROW} justify-end`}>
               {status === 'running' || durationMs === undefined ? null : (
                 <span className="run-arrival">
                   {seconds.format(durationMs / 1000)} s

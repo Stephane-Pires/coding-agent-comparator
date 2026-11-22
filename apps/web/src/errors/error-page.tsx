@@ -7,15 +7,15 @@ import { Button } from '@comparator/ui/components/ui/button';
 
 /**
  * The frame of a page that has only a message (an error, the password): the header, the message in the middle of
- * what is left, and the signature. `busy`: the message is still to come.
+ * what is left, and the signature. `isBusy`: the message is still to come.
  */
 export function MessagePage({
   title,
-  busy = false,
+  isBusy = false,
   children,
 }: {
   title: string;
-  busy?: boolean;
+  isBusy?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -23,7 +23,7 @@ export function MessagePage({
       <div className="page-frame py-4">
         <PageHeader title={title} />
       </div>
-      <main className="page-frame flex min-h-0 flex-1" aria-busy={busy}>
+      <main className="page-frame flex min-h-0 flex-1" aria-busy={isBusy}>
         {children}
       </main>
       <footer className="page-frame py-2">

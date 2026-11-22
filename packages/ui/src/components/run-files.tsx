@@ -12,7 +12,7 @@ interface Folder {
 }
 
 /** The folders and files behind a list of paths. */
-function treeOf(paths: readonly string[]): Folder {
+function buildTree(paths: readonly string[]): Folder {
   const root: Folder = { folders: new Map(), files: [] };
   for (const path of paths) {
     const names = path.split('/');
@@ -28,13 +28,13 @@ function treeOf(paths: readonly string[]): Folder {
   return root;
 }
 
-const byName = (a: string, b: string) => a.localeCompare(b);
+const compareNames = (a: string, b: string) => a.localeCompare(b);
 
 /** A folder's content: its folders first, then its files, each by name. */
 function Entries({ folder, parent }: { folder: Folder; parent: string }) {
   return (
     <>
-      {[...folder.folders.keys()].toSorted(byName).map((name) => {
+      {[...folder.folders.keys()].toSorted(compareNames).map((name) => {
         const path = `${parent}${name}`;
         const child = folder.folders.get(name);
         return child ? (
@@ -44,7 +44,7 @@ function Entries({ folder, parent }: { folder: Folder; parent: string }) {
         ) : null;
       })}
       {folder.files
-        .toSorted((a, b) => byName(a.name, b.name))
+        .toSorted((a, b) => compareNames(a.name, b.name))
         .map((file) => (
           <FileTreeFile key={file.path} name={file.name} path={file.path} />
         ))}
@@ -53,7 +53,7 @@ function Entries({ folder, parent }: { folder: Folder; parent: string }) {
 }
 
 /** Every folder on the way to each path: `src/lib/a.ts` gives `src` and `src/lib`. */
-const foldersOf = (paths: readonly string[]): string[] =>
+const getFolders = (paths: readonly string[]): string[] =>
   paths.flatMap((path) => {
     const names = path.split('/').slice(0, -1);
     return names.map((_, index) => names.slice(0, index + 1).join('/'));
@@ -71,7 +71,7 @@ export function RunFiles({ files }: { files: readonly WorkspaceFile[] }) {
   const [selectedPath, setSelectedPath] = useState<string>();
   const selected = present.find((file) => file.path === selectedPath);
 
-  const folders = foldersOf(paths);
+  const folders = getFolders(paths);
   const expanded = new Set(folders.filter((path) => !closed.has(path)));
 
   return (
@@ -88,7 +88,7 @@ export function RunFiles({ files }: { files: readonly WorkspaceFile[] }) {
           onSelect={setSelectedPath}
           selectedPath={selected?.path}
         >
-          <Entries folder={treeOf(paths)} parent="" />
+          <Entries folder={buildTree(paths)} parent="" />
         </FileTree>
         {selected ? (
           // The frame of a snippet in an agent's message: a label, then the code on an inset panel.

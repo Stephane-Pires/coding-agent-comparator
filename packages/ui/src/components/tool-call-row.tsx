@@ -18,8 +18,15 @@ import {
 } from '@comparator/ui/components/ui/collapsible';
 import { ICONS } from '@comparator/ui/icons';
 
+/** A call on its one line: its text, whether that text is code, and a word before it. */
+interface ToolTitle {
+  readonly text: string;
+  readonly isCode: boolean;
+  readonly before?: string;
+}
+
 /** The word and the tone of each status. Colour is never the only signal: the icon and the word say it too. */
-export const STATUSES: Record<ToolCall['status'], { label: string; tone: string }> = {
+export const TOOL_CALL_STATUSES: Record<ToolCall['status'], { label: string; tone: string }> = {
   running: { label: 'Running', tone: 'text-muted-foreground' },
   succeeded: { label: 'Done', tone: 'text-success' },
   failed: { label: 'Failed', tone: 'text-destructive' },
@@ -28,22 +35,28 @@ export const STATUSES: Record<ToolCall['status'], { label: string; tone: string 
 const CHANGES = { created: 'Created', modified: 'Modified', deleted: 'Deleted' } as const;
 
 /** A diff as a code block of an agent's message, so it gets the same colours as the code the agents quote. */
-function diffBlock(diff: string): string {
+function formatDiff(diff: string): string {
   // A fence longer than any run of backticks in the diff.
   const fence = '`'.repeat(Math.max(3, ...[...diff.matchAll(/`+/g)].map(([run]) => run.length + 1)));
   return `${fence}diff\n${diff}\n${fence}`;
 }
 
 /** What a call is shown as on its one line: what the agent ran, searched, edited or used. */
-export function titleOf(tool: Tool): { text: string; code: boolean; before?: string } {
-  if (tool.type === 'command') return { text: tool.command, code: true };
-  if (tool.type === 'file-edit') return { text: tool.path, code: true, before: CHANGES[tool.change] };
-  if (tool.type === 'web-search') return { text: tool.query || 'Searching the web', code: false };
-  return { text: tool.input ? `${tool.name} ${tool.input}` : tool.name, code: false };
+export function getTitle(tool: Tool): ToolTitle {
+  switch (tool.type) {
+    case 'command':
+      return { text: tool.command, isCode: true };
+    case 'file-edit':
+      return { text: tool.path, isCode: true, before: CHANGES[tool.change] };
+    case 'web-search':
+      return { text: tool.query || 'Searching the web', isCode: false };
+    case 'other':
+      return { text: tool.input ? `${tool.name} ${tool.input}` : tool.name, isCode: false };
+  }
 }
 
 function Status({ status }: { status: ToolCall['status'] }) {
-  const { label, tone } = STATUSES[status];
+  const { label, tone } = TOOL_CALL_STATUSES[status];
   const Icon = ICONS.toolCall[status];
   return (
     <span className={cn('flex shrink-0 items-center gap-1 text-xs', tone)}>
@@ -61,12 +74,12 @@ function Status({ status }: { status: ToolCall['status'] }) {
 export function ToolCallRow({ call }: { call: ToolCall }) {
   const { tool, status, output } = call;
   const Icon = ICONS.tool[tool.type];
-  const title = titleOf(tool);
+  const title = getTitle(tool);
   const line = (
     <>
       <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
       {title.before ? <span className="shrink-0">{title.before}</span> : null}
-      <span className={cn('min-w-0 flex-1 truncate text-left', title.code && 'font-mono text-xs')}>
+      <span className={cn('min-w-0 flex-1 truncate text-left', title.isCode && 'font-mono text-xs')}>
         {title.text}
       </span>
       <Status status={status} />
@@ -91,9 +104,9 @@ export function ToolCallRow({ call }: { call: ToolCall }) {
     );
   }
 
-  const multiline = tool.type === 'command' && tool.command.includes('\n');
+  const isMultiline = tool.type === 'command' && tool.command.includes('\n');
   const diff = tool.type === 'file-edit' ? tool.diff : '';
-  if (output === '' && !multiline && diff === '')
+  if (output === '' && !isMultiline && diff === '')
     return <div className="flex items-center gap-2 px-3 py-2 text-sm">{line}</div>;
 
   return (
@@ -106,8 +119,8 @@ export function ToolCallRow({ call }: { call: ToolCall }) {
         />
       </CollapsibleTrigger>
       <CollapsibleContent className="flex flex-col gap-2 px-3 pb-3">
-        {multiline ? <Terminal output={tool.command} aria-label="Command" /> : null}
-        {diff === '' ? null : <MessageResponse>{diffBlock(diff)}</MessageResponse>}
+        {isMultiline ? <Terminal output={tool.command} aria-label="Command" /> : null}
+        {diff === '' ? null : <MessageResponse>{formatDiff(diff)}</MessageResponse>}
         {output === '' ? null : <Terminal output={output} isStreaming={status === 'running'} />}
       </CollapsibleContent>
     </Collapsible>

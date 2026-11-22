@@ -4,6 +4,13 @@ import { z } from 'zod';
 import type { CodingAgent, RunReviewer, TaskClassifier, WorkspaceProvider } from '@comparator/application';
 import { AgentId, RunEvent, TaskVerdict, type AgentEvent, type WorkspaceFile } from '@comparator/domain';
 
+export interface RecordedRuntime {
+  readonly agents: Readonly<Record<AgentId, CodingAgent>>;
+  readonly workspaces: WorkspaceProvider;
+  readonly classifier: TaskClassifier;
+  readonly reviewer: RunReviewer;
+}
+
 /**
  * One task as it really went: what the task check said, and for each agent the events of its run, as `startRun`
  * yielded them. Made by `pnpm fixtures:record`, from real runs.
@@ -15,13 +22,6 @@ export const Recording = z.object({
   runs: z.partialRecord(AgentId, z.array(RunEvent)),
 });
 export type Recording = z.infer<typeof Recording>;
-
-export interface RecordedRuntime {
-  readonly agents: Readonly<Record<AgentId, CodingAgent>>;
-  readonly workspaces: WorkspaceProvider;
-  readonly classifier: TaskClassifier;
-  readonly reviewer: RunReviewer;
-}
 
 /** What an agent said in a run, as the run hands it to a reviewer: its messages, in order. */
 const getAnswer = (events: readonly RunEvent[]): string =>

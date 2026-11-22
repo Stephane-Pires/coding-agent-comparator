@@ -4,16 +4,23 @@ import { Button } from '@comparator/ui/components/ui/button';
 import { Input } from '@comparator/ui/components/ui/input';
 import { ICONS } from '@comparator/ui/icons';
 
+/** The padlock's motion: its shackle lifts for the right password, it shakes for a wrong one. */
+function getPadlockClass(isOpened: boolean, isRefused: boolean) {
+  if (isOpened) return 'padlock-open';
+  if (isRefused) return 'padlock-refused';
+  return undefined;
+}
+
 /**
  * For the password page: a row of ski lockers in the snow, a padlock on the middle one, and a pair of skis left
- * leaning against the side. The padlock shakes once when `refused` becomes true: the answer to a wrong password.
- * Its shackle lifts when `opened`: the answer to the right one.
+ * leaning against the side. The padlock shakes once when `isRefused` becomes true: the answer to a wrong password.
+ * Its shackle lifts when `isOpened`: the answer to the right one.
  */
 function SkiLocker({
-  refused = false,
-  opened = false,
+  isRefused = false,
+  isOpened = false,
   ...props
-}: SVGProps<SVGSVGElement> & { refused?: boolean; opened?: boolean }) {
+}: SVGProps<SVGSVGElement> & { isRefused?: boolean; isOpened?: boolean }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 120" aria-hidden="true" {...props}>
       <path className="fill-muted" d="M0 120V104Q60 96 120 100T240 98V120Z" />
@@ -44,7 +51,7 @@ function SkiLocker({
         <path d="M98 66V76M142 66V76" />
       </g>
       {/* the padlock */}
-      <g className={opened ? 'padlock-open' : refused ? 'padlock-refused' : undefined}>
+      <g className={getPadlockClass(isOpened, isRefused)}>
         <path
           className="padlock-shackle stroke-brand"
           fill="none"
@@ -66,27 +73,27 @@ function SkiLocker({
 export function PasswordGate({
   action,
   error,
-  pending = false,
-  opened = false,
+  isPending = false,
+  isOpened = false,
 }: {
   /** Receives the form; the password is its `password` field. */
   action: ComponentProps<'form'>['action'];
   /** What to say when the password was wrong. */
   error?: string | undefined;
   /** The password is being checked. */
-  pending?: boolean;
+  isPending?: boolean;
   /** The password was right: the padlock opens. */
-  opened?: boolean;
+  isOpened?: boolean;
 }) {
   const id = useId();
   // The password is hidden as it is typed; the eye shows it, to check it before sending.
-  const [shown, setShown] = useState(false);
-  const Reveal = shown ? ICONS.reveal.hide : ICONS.reveal.show;
-  const reveal = shown ? 'Hide the password' : 'Show the password';
+  const [isShown, setIsShown] = useState(false);
+  const Reveal = isShown ? ICONS.reveal.hide : ICONS.reveal.show;
+  const reveal = isShown ? 'Hide the password' : 'Show the password';
   return (
     <div className="flex size-full flex-col items-center justify-center gap-3 p-8 text-center">
       {/* Not while the password is checked: a second wrong one makes the padlock shake again. */}
-      <SkiLocker className="w-60" refused={error !== undefined && !pending} opened={opened} />
+      <SkiLocker className="w-60" isRefused={error !== undefined && !isPending} isOpened={isOpened} />
       <h2 className="text-lg font-medium">The ski locker is locked.</h2>
       <p className="text-sm text-muted-foreground">This app is private. Enter its password to start a run.</p>
       <form action={action} className="mt-2 flex w-full max-w-xs flex-col gap-2 text-left">
@@ -98,7 +105,7 @@ export function PasswordGate({
             <Input
               id={`${id}-password`}
               name="password"
-              type={shown ? 'text' : 'password'}
+              type={isShown ? 'text' : 'password'}
               autoComplete="current-password"
               autoFocus
               required
@@ -113,14 +120,14 @@ export function PasswordGate({
               className="absolute top-0 right-0 text-muted-foreground hover:bg-transparent hover:text-foreground dark:hover:bg-transparent"
               aria-label={reveal}
               title={reveal}
-              aria-pressed={shown}
-              onClick={() => setShown((now) => !now)}
+              aria-pressed={isShown}
+              onClick={() => setIsShown((now) => !now)}
             >
               <Reveal />
             </Button>
           </div>
-          <Button type="submit" disabled={pending}>
-            {pending ? 'Checking…' : 'Enter'}
+          <Button type="submit" disabled={isPending}>
+            {isPending ? 'Checking…' : 'Enter'}
           </Button>
         </div>
         {/* Always there, so that a screen reader announces the sentence when it appears. */}

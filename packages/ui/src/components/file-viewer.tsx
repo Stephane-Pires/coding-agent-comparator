@@ -82,24 +82,24 @@ const isDark = () => document.documentElement.classList.contains('dark');
 const NOTE = 'flex h-full items-center justify-center p-4 text-sm text-muted-foreground';
 const LOADING = <p className={NOTE}>Loading the editor…</p>;
 
-/** The editor's own code, loaded once from the app's bundle, when the first file is opened. */
+/** The editor's own code, isLoaded once from the app's bundle, when the first file is opened. */
 let editorCode: Promise<unknown> | undefined;
 function useEditorCode(): boolean {
-  const [loaded, setLoaded] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   useEffect(() => {
     let current = true;
     editorCode ??= import('../editor/setup.ts');
-    void editorCode.then(() => current && setLoaded(true));
+    void editorCode.then(() => current && setIsLoaded(true));
     return () => {
       current = false;
     };
   }, []);
-  return loaded;
+  return isLoaded;
 }
 
 /**
  * One file, read-only, in a code editor that fills the space it is given. The editor's code is part of the app,
- * and is loaded when the first file is opened, not with the page.
+ * and is isLoaded when the first file is opened, not with the page.
  */
 export function FileViewer({ file }: { file: WorkspaceFile }) {
   const dark = useSyncExternalStore(watchTheme, isDark, () => false);

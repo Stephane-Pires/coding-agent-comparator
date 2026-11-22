@@ -27,7 +27,7 @@ type Block =
   | { type: 'tool-calls'; id: string; calls: ToolCall[] };
 
 /** Tool calls that follow each other form one block, so a long run reads as a few groups and not a hundred rows. */
-function blocksOf(items: readonly RunItem[]): Block[] {
+function groupIntoBlocks(items: readonly RunItem[]): Block[] {
   const blocks: Block[] = [];
   for (const item of items) {
     const last = blocks.at(-1);
@@ -55,7 +55,7 @@ export function RunColumn({ agent, status, items, files = [], reason }: RunColum
       {status === 'running' && items.length === 0 ? (
         <p className="text-sm text-muted-foreground">At the start. Its first moves show here.</p>
       ) : null}
-      {blocksOf(items).map((block) =>
+      {groupIntoBlocks(items).map((block) =>
         block.type === 'message' ? (
           <Message key={block.id} from="assistant">
             <MessageContent>
