@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// Drives the real page in a browser, on a production build of the web app and on the API. The four ways to run it
-// (`pnpm test:e2e`, `:live`, `:sandbox`, `:film`) and when to use each: docs/infrastructure.md, "Recorded runs".
+// Drives the real page in a browser, on a production build of the web app and on the API. `pnpm test:e2e` runs it on
+// recordings, `:live` on the real agents, `:sandbox` on them in Vercel Sandboxes, `:film` saves a video of each test.
 // What runs the tasks: recordings unless told otherwise.
 const runtime = process.env['E2E_RUNTIME'] ?? 'recorded';
 const live = runtime !== 'recorded';
