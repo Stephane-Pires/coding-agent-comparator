@@ -1,12 +1,10 @@
 # Infrastructure
 
-What runs, where, and what it needs: first on a dev machine, then [hosted on Vercel](#production-environment). The
-code is the same in both; only settings differ.
+What runs where, on a dev machine and [on Vercel](#production-environment). Same code; only settings differ.
 
 ## Dev environment
 
-One command, `pnpm dev`, starts two processes: the web app and the API. Each run starts one more process, the agent,
-in its own folder.
+`pnpm dev` starts the web app and the API. Each run adds one agent process, in its own folder.
 
 ```mermaid
 flowchart LR
@@ -42,130 +40,107 @@ flowchart LR
   codex -- "HTTPS" --> openai
 ```
 
-| Part          | What it is                                                                         | Lifetime                      |
-| ------------- | ---------------------------------------------------------------------------------- | ----------------------------- |
-| Web app       | Next.js serving the chat page. It holds no secret and calls no agent.              | Until you stop `pnpm dev`     |
-| API process   | Node running `apps/server/src/main.ts` directly, with no build step                | Until you stop `pnpm dev`     |
-| Agent process | The agent's own binary, installed by `pnpm install` with its SDK                   | One run                       |
-| Workspace     | A folder `comparator-*` under the OS temp directory, outside the repo              | One run; deleted when it ends |
-| State         | None on the server. The page keeps the comparisons in memory until it is reloaded. |                               |
+| Part      | What it is                                                   | Lives                  |
+| --------- | ------------------------------------------------------------ | ---------------------- |
+| Web app   | Next.js, the chat page. No secret, calls no agent.           | Until `pnpm dev` stops |
+| API       | Node running `apps/server/src/main.ts`, no build step        | Until `pnpm dev` stops |
+| Agent     | The agent's binary, installed with its SDK by `pnpm install` | One run                |
+| Workspace | `comparator-*` under the OS temp directory                   | One run, then deleted  |
+| State     | None on the server; the page keeps comparisons in memory     | Until the page reloads |
 
-The browser only talks to the web app's origin. The web app forwards `/rpc` to the API (a rewrite in `next.config.ts`), so
-the API's address is a server-side setting and no cross-origin rule is needed. A comparison is one stream per agent, opened by the page with
-the same task; closing a stream (the Stop button) cancels that run.
+- The browser only talks to the web app, which forwards `/rpc` to the API (`next.config.ts`). No cross-origin rule.
+- A comparison is one stream per agent. Closing a stream (Stop) cancels that run.
 
 ### The task check
 
-Before any agent starts, the API asks a model one question: is this a coding task whose result is files? The page
-asks first (`/rpc/tasks/check`) and shows one refusal for the comparison; each run asks again by itself, so the check
-cannot be skipped by calling the API directly, and finds the verdict already given. A refused task creates no
-workspace and starts no agent.
+Before any agent starts, a small model answers: is this a coding task whose result is files?
 
-The question is asked one of two ways, to the same small model. With an Anthropic key, the API is called directly:
-one request, under a second. With no key, Claude Code asks it, with no tools, on the machine's login: about three
-seconds, the time a process takes to start. If the model cannot be reached, the task is accepted: the check is a filter, not a lock. The rule and
-the instructions are in the core (`verdictOf`, `TASK_CHECK_INSTRUCTIONS`); `pnpm eval:task-check` measures them on
-the labelled tasks of `fixtures/task-check.json`.
+- The page asks first (`/rpc/tasks/check`); each run asks again, so calling the API directly cannot skip it.
+- A refused task starts no workspace and no agent.
+- With an Anthropic key: one API call, under 1 s. Without: Claude Code on the machine's login, about 3 s.
+- If the model is unreachable, the task is accepted: a filter, not a lock.
+- Rule and instructions: `verdictOf`, `TASK_CHECK_INSTRUCTIONS`. Measured by `pnpm eval:task-check` on
+  `fixtures/task-check.json`.
 
 ### The review of a run
 
-An agent can stop without an error and not have done its task: it asks a question back, or describes what it would
-do. So when an agent stops cleanly, the API asks a model one more question: was the task done? It shows the model the
-task, what the agent said, the paths of the files it left and how many tools it called, and never which agent it was.
-A run that did not do its task ends as **incomplete**, with one sentence saying what is missing.
+An agent can stop cleanly without doing the task (it asks a question back, or describes a plan). So after a clean
+stop, the same small model answers: was the task done?
 
-The question takes the same route as the task check, on the same small model: under a second through
-the API, about three through Claude Code. That time is not counted in the run's duration. If the model cannot be reached, the run counts as
-finished. `pnpm eval:run-review` measures the instructions on the labelled runs of `fixtures/run-review.json`.
+- It sees the task, what the agent said, the files left and the number of tool calls; never which agent it was.
+- Not done: the run ends **Incomplete**, with one sentence on what is missing.
+- Same route and times as the task check, not counted in the run's duration. Unreachable model: the run is finished.
+- Measured by `pnpm eval:run-review` on `fixtures/run-review.json`.
 
 ### The agents in a sandbox
 
-With `AGENT_RUNTIME=sandbox` each agent runs in a Vercel Sandbox of its own: a Linux machine made for the run and
-destroyed after it. It is the only way to run an agent when the API is hosted, where there is no machine of ours,
-and it can be used from a dev machine too.
+`AGENT_RUNTIME=sandbox` runs each agent in its own Vercel Sandbox, a Linux machine made for the run. It is the only
+way when hosted, and works from a dev machine too. For one run, the API:
 
-The API never runs an agent itself there. For one run it:
+1. creates a sandbox (about 0.3 s);
+2. sends the agent's command (`claude --print … --output-format stream-json`, `codex exec --json …`) with that
+   agent's key only;
+3. reads one JSON event per line, through the same translators as locally;
+4. reads the folder's files after each tool call, and at the end;
+5. stops the sandbox, however the run ended.
 
-1. asks Vercel for a sandbox (about 0.3 seconds);
-2. sends it the agent's own command, `claude --print … --output-format stream-json` or `codex exec --json …`, with
-   that agent's API key and nothing else of ours;
-3. reads what the agent prints, one JSON event per line, as it is printed, and gives each line to the same
-   translator as on a dev machine;
-4. asks the sandbox for the files of the folder after each tool call that ended, and at the end;
-5. stops the sandbox, whether the run finished, failed, was stopped by the user or reached its limit.
+Differences from a local run:
 
-Three things differ from a run on a dev machine:
+- **The agents are Vercel's image versions**, not the lockfile's. Nothing is installed: first event at about 1.6 s.
+- **Codex's inner sandbox is off.** It cannot start there; the Vercel Sandbox is the isolation.
+- **A run lasts 240 s at most**, then fails with a sentence saying so.
+- **Both keys are required** (no login). Outside Vercel, also `VERCEL_OIDC_TOKEN`: `vercel env pull` writes one
+  valid 12 hours.
 
-- **The agents are those of Vercel's image**, not the versions our lockfile pins. Nothing is installed, which is
-  why an agent's first event comes about 1.6 seconds after the sandbox is asked for.
-- **Codex's own inner sandbox is turned off.** It cannot start inside a Vercel Sandbox, and Codex then refuses
-  every command. The Vercel Sandbox is the isolation.
-- **A run has a limit**, 240 seconds: a hosted API cannot hold a request
-  for ever. A run that reaches it fails with a sentence saying so.
+### Recorded runs and the end-to-end tests
 
-Both API keys are required: a sandbox has no login. Outside Vercel a sandbox token is needed too, in
-`VERCEL_OIDC_TOKEN`; `vercel env pull` writes one that lasts 12 hours.
+`AGENT_RUNTIME=recorded` replays real runs from `fixtures/recordings.json` instead of the agents, workspaces and
+model questions. No key, no login, same answer whatever the task. Everything above the ports is the real code.
 
-### Recorded runs, and the end-to-end test
+| Command                 | Runs on                     | Guards                                      |
+| ----------------------- | --------------------------- | ------------------------------------------- |
+| `pnpm test:e2e`         | The recordings              | Our code: use cases, API, page              |
+| `pnpm test:e2e:live`    | The real agents             | A change in what the agents send            |
+| `pnpm test:e2e:sandbox` | The real agents, in Sandbox | The hosted path and Vercel's agent versions |
 
-With `AGENT_RUNTIME=recorded` the API replays recordings of real runs (`fixtures/recordings.json`) in place of the
-agents, their workspaces and the two questions asked to a model. Nothing calls a provider, so it needs no key and no
-login, and it gives the same answer whatever the task. Everything above the ports is the real code.
-
-One browser test runs on each runtime:
-
-| Command                 | Runs on                            | Guards                                            |
-| ----------------------- | ---------------------------------- | ------------------------------------------------- |
-| `pnpm test:e2e`         | the recordings                     | our own code: the use cases, the API, the page    |
-| `pnpm test:e2e:live`    | the real Claude Code and Codex     | the agents: a change in what they send            |
-| `pnpm test:e2e:sandbox` | the same, each in a Vercel Sandbox | the hosted path, and the agents of Vercel's image |
-
-To see what a test does, one command: `pnpm test:e2e:film`. It plays the recorded tests at a speed a person can
-read and saves a video of each under its name in `e2e-videos/` (ignored by git). Add `E2E_RUNTIME=local` in front
-to film the real agents the same way.
-
-A recording cannot show that an agent changed. An agent's binary comes with its SDK, at the version the lockfile
-pins, so that can only happen on an upgrade: then run the live test, and make the recordings again with
-`pnpm fixtures:record`. Every way of running the test starts its own API and a production build of the web app, on ports 3011 and
-3110 (`E2E_API_PORT` and `E2E_WEB_PORT` change them), beside a dev server if one is running.
+- `pnpm test:e2e:film` plays the recorded tests at reading speed and saves a video each in `e2e-videos/`. Prefix
+  `E2E_RUNTIME=local` to film the real agents.
+- After upgrading an agent's SDK: run the live test, then `pnpm fixtures:record`.
+- Each test starts its own API and web build on ports 3011 and 3110 (`E2E_API_PORT`, `E2E_WEB_PORT`), beside a dev
+  server.
 
 ### Routes
 
-| Route                   | What it serves                                                    |
-| ----------------------- | ----------------------------------------------------------------- |
-| `POST /api/tasks/check` | Says whether a task is a coding task whose result is files        |
-| `GET /api/access`       | Says whether the caller may use the API                           |
-| `POST /api/access`      | Takes the password; a right one sets the cookie that gives access |
-| `POST /api/runs`        | Runs one agent on a task; the answer is a stream of events (REST) |
-| `POST /rpc/runs/start`  | The same procedure for the typed oRPC client                      |
-| `GET /openapi.json`     | The OpenAPI document, generated from the contract                 |
-| `GET /docs`             | The API reference (Scalar)                                        |
+| Route                   | Does                                                       |
+| ----------------------- | ---------------------------------------------------------- |
+| `POST /api/tasks/check` | Says whether a task is a coding task whose result is files |
+| `GET /api/access`       | Says whether the caller may use the API                    |
+| `POST /api/access`      | Checks the password; a right one sets the pass cookie      |
+| `POST /api/runs`        | Runs one agent on a task, as a stream of events (REST)     |
+| `POST /rpc/runs/start`  | The same, for the typed oRPC client                        |
+| `GET /openapi.json`     | The OpenAPI document, generated from the contract          |
+| `GET /docs`             | The API reference (Scalar)                                 |
 
 ### Configuration and secrets
 
-Read from the environment, and from a `.env` file at the root of the repository when there is one. The server checks it at startup and stops with the name of any variable that is wrong.
-
-Every variable, its default and what it does are listed in `.env.example`, which is the file to copy.
-
-A key is given to its own agent only. Each agent's process starts without the other provider's variables, and
-without any credential variable left in the server's environment: credentials reach an agent through this
-configuration and nothing else.
+- Read from the environment and from `.env` at the repository root. Every variable and default is in `.env.example`.
+- The server checks them at startup and stops naming any wrong variable.
+- Each agent gets its own key only: no other provider's variable, no other credential of the server.
 
 ### What an agent may do
 
-An agent runs unattended, so it is never asked for approval.
+Agents run unattended, never asked for approval.
 
-- **Claude Code:** a fixed list of pre-approved tools (read, write, edit, search, shell, web search, web fetch); its
-  working directory is the workspace.
-- **Codex:** its own sandbox in `workspace-write` mode, so it writes inside the workspace only; network access and web
-  search are on.
+- **Claude Code:** a fixed list of pre-approved tools (read, write, edit, search, shell, web search, web fetch),
+  started in the workspace.
+- **Codex:** its sandbox in `workspace-write`, so it writes only in the workspace; network and web search on.
 
-On a dev machine the agents are processes of your user. The workspace is where they start, and Codex is confined to
-it by its sandbox; Claude Code's shell tool is not. Run tasks you would run yourself.
+Locally, agents run as your user. Codex is confined to the workspace; Claude Code's shell is not. Run tasks you would
+run yourself.
 
 ## Production environment
 
-Two Vercel projects, built from this one repository. A push to `main` deploys both.
+Two Vercel projects from this repository. A push to `main` deploys both.
 
 ```mermaid
 flowchart TB
@@ -201,95 +176,80 @@ flowchart TB
 
 ### The password
 
-One password, `DEMO_PASSWORD`, checked in one place: the API (`apps/server/src/access.ts`). The API is what spends the
-API keys, and it has a public address of its own, so the lock is there and nowhere else. The web app holds no secret.
+One password, `DEMO_PASSWORD`, checked only by the API (`apps/server/src/access.ts`): the API spends the keys and has
+its own public address. The web app holds no secret.
 
-| Step             | What happens                                                                                |
-| ---------------- | ------------------------------------------------------------------------------------------- |
-| The page loads   | It asks `access.get`. Until the answer comes it shows its header only, never the app.       |
-| Not allowed      | It shows the password form.                                                                 |
-| The form is sent | `access.enter` checks the password. A right one sets a cookie, the pass.                    |
-| Every later call | The browser sends the pass by itself; `tasks.check` and `runs.start` answer 401 without it. |
+| Step             | What happens                                                              |
+| ---------------- | ------------------------------------------------------------------------- |
+| The page loads   | It asks `access.get`; until the answer, only the header shows             |
+| Not allowed      | The password form                                                         |
+| Form sent        | `access.enter` checks it; a right one sets the pass cookie                |
+| Every later call | The browser sends the pass; `tasks.check` and `runs.start` 401 without it |
 
-- The pass is a cookie no script of the page can read (`HttpOnly`), that another site cannot make the browser send
-  (`SameSite=Lax`), sent over HTTPS only, and kept for a week. It holds a digest, not the password; changing
-  `DEMO_PASSWORD` ends every pass.
-- The cookie belongs to the web app's address: the browser only ever talks to that address, and the forwarding
-  carries the cookie to the API and its answer back.
-- A program sends the password with each call, as `Authorization: Bearer <password>`. The reference at `/docs` has a
-  field for it. `/docs` and `/openapi.json` are open: they spend nothing.
-- **A hosted API without `DEMO_PASSWORD` does not start.** Nothing is left open by forgetting the setting.
-- On a dev machine no password is set and everyone is allowed. The end-to-end tests set one, so they run the app as
-  it is hosted.
-- A wrong password, on the form or sent with a call, is answered only after one second. Nothing is counted, so
-  nothing is stored; guessing a long password becomes impractical.
-- Known limit: the page itself and its scripts are served to anyone; they hold no data, and no call works without
-  the password.
+- The pass: `HttpOnly`, `SameSite=Lax`, HTTPS only, one week. It holds a digest; changing `DEMO_PASSWORD` ends every
+  pass.
+- The cookie is on the web app's address; the forwarding carries it to the API.
+- Programs send `Authorization: Bearer <password>`; `/docs` has a field for it. `/docs` and `/openapi.json` are open.
+- **A hosted API without `DEMO_PASSWORD` does not start.**
+- Locally there is no password. The end-to-end tests set one, to run as hosted.
+- A wrong password is answered after 1 s. Nothing is counted or stored.
+- Known limit: the page and its scripts are public; they hold no data.
 
 ### Limits on use
 
-The hosted app limits how much it is used, by everyone together: **6 runs at once and 40 runs an hour**, so 3
-comparisons at once and 20 an hour (`apps/server/src/runtimes/hosted.ts`). The app keeps no counter: before a run
-creates its sandbox, the API reads Vercel's list of the project's sandboxes, newest first (about 0.3 s), and counts
-those running and those created in the last hour. Over a limit, the run does not start and says which limit, and
-when to try again.
+Shared by everyone: **6 runs at once, 40 an hour** (3 comparisons at once, 20 an hour), in
+`apps/server/src/runtimes/hosted.ts`.
 
-- Two runs asked for at the same instant can both pass: the limits are a guard, not an exact quota.
-- If Vercel's list cannot be read, the run goes ahead: a guard that fails does not stop the app.
-- On a dev machine there are no sandboxes, and no limits.
-- When a provider itself limits requests, the run ends saying the provider is busy and to try again in a minute;
-  the provider's words go to the server's log.
-- The hard limit on the bill is a spending cap on each API key, set at Anthropic and OpenAI.
+- No counter: before creating a sandbox, the API reads Vercel's list of the project's sandboxes (about 0.3 s).
+- Over a limit, the run does not start and says which limit and when to retry.
+- Approximate: two runs at the same instant can both pass. If the list cannot be read, the run goes ahead.
+- A provider rate limit ends the run with "busy, try again in a minute"; its words go to the server log.
+- The real cap on the bill is a spending limit on each key, set at Anthropic and OpenAI.
 
 ### What differs from a dev machine
 
-|                      | Dev machine                                       | Vercel                                            |
-| -------------------- | ------------------------------------------------- | ------------------------------------------------- |
-| Entry of the API     | `src/main.ts`: serves on a port                   | `src/index.ts`: hands the same Hono app to Vercel |
-| Where the agents run | Processes on the machine (`AGENT_RUNTIME=local`)  | Sandboxes, the default there and the only choice  |
-| The two questions    | The Anthropic API with a key, Claude Code without | The Anthropic API                                 |
-| Credentials          | Keys or logins                                    | Keys only                                         |
-| Password             | None                                              | Required                                          |
-| Longest run          | No limit                                          | 240 seconds, under the 300 a function may last    |
-| Use                  | No limit                                          | 6 runs at once, 40 an hour                        |
+|                   | Dev machine                                   | Vercel                                            |
+| ----------------- | --------------------------------------------- | ------------------------------------------------- |
+| API entry         | `src/main.ts`, serves on a port               | `src/index.ts`, hands the same Hono app to Vercel |
+| Agents run        | On the machine (`AGENT_RUNTIME=local`)        | In sandboxes, the only choice                     |
+| The two questions | Anthropic API with a key, Claude Code without | Anthropic API                                     |
+| Credentials       | Keys or logins                                | Keys only                                         |
+| Password          | None                                          | Required                                          |
+| Longest run       | No limit                                      | 240 s, under a function's 300 s                   |
+| Use               | No limit                                      | 6 at once, 40 an hour                             |
 
-Vercel compiles the API to JavaScript, but our packages name a TypeScript file as their entry, which Node runs as
-it is. So `apps/server/vercel.json` keeps the packages' TypeScript sources in the function; without it the function
-builds and then fails at its first request, unable to find `@comparator/contracts/src/index.ts`.
+Three traps, each already handled:
 
-`@vercel/sandbox` is pinned to 4.0.0. From 4.1.0 it depends on `@vercel/drives`, a CommonJS package that loads an
-ES module with `require()`. Plain Node accepts that; the loader of a Vercel Function does not, and the function
-fails at its first request with `ERR_REQUIRE_ESM`. To check a later version before upgrading, load the built
-function with `node --no-experimental-require-module`.
-
-The hosted entry must never load an agent's SDK: a function holds 250 MB at most, and the agents weigh 700 MB.
-`tooling/hosted-entry.test.ts` follows every import from `src/index.ts` and fails if one leads to an SDK.
+- **TypeScript entries.** Our packages export `.ts` files. `apps/server/vercel.json` includes their sources in the
+  function; without it, the first request fails on `@comparator/contracts/src/index.ts`.
+- **`@vercel/sandbox` pinned to 4.0.0.** From 4.1.0 it pulls `@vercel/drives`, which a Vercel Function cannot load
+  (`ERR_REQUIRE_ESM`). Test an upgrade with `node --no-experimental-require-module` on the built function.
+- **No agent SDK in the function.** A function holds 250 MB; the agents weigh 700 MB.
+  `tooling/hosted-entry.test.ts` fails if an import from `src/index.ts` reaches an SDK.
 
 ### Setting it up
 
-Done once, in Vercel's dashboard.
+Once, in Vercel's dashboard.
 
 1. Create two projects from the GitHub repository:
 
-   | Project                       | Root Directory | Framework |
-   | ----------------------------- | -------------- | --------- |
-   | `coding-agent-comparator-api` | `apps/server`  | Hono      |
-   | `coding-agent-comparator`     | `apps/web`     | Next.js   |
+   | Project                          | Root Directory | Framework |
+   | -------------------------------- | -------------- | --------- |
+   | `coding-agent-comparator-server` | `apps/server`  | Hono      |
+   | `coding-agent-comparator`        | `apps/web`     | Next.js   |
 
-2. Set the environment variables, for Production:
+2. Set the Production variables:
 
-   | Project | Variable            | Value                                                                           |
-   | ------- | ------------------- | ------------------------------------------------------------------------------- |
-   | API     | `ANTHROPIC_API_KEY` | The Anthropic key                                                               |
-   | API     | `OPENAI_API_KEY`    | The OpenAI key                                                                  |
-   | API     | `DEMO_PASSWORD`     | The password you give to visitors, 8 characters or more                         |
-   | Web     | `API_URL`           | The address of the API project, `https://…vercel.app`, with no slash at the end |
+   | Project | Variable            | Value                                              |
+   | ------- | ------------------- | -------------------------------------------------- |
+   | API     | `ANTHROPIC_API_KEY` | The Anthropic key                                  |
+   | API     | `OPENAI_API_KEY`    | The OpenAI key                                     |
+   | API     | `DEMO_PASSWORD`     | 8 characters or more                               |
+   | Web     | `API_URL`           | The API's `https://…vercel.app`, no trailing slash |
 
-   The sandbox token is not in this list: Vercel gives it to the API by itself. `API_URL` is read when the web app
-   is built: after changing it, deploy the web project again.
+   Vercel provides the sandbox token itself. `API_URL` is read at build: redeploy the web app after changing it.
 
-   Vercel's build can be run on a dev machine, to see a failure without deploying: in a plain clone (not a git
-   worktree), from `apps/server`, link the folder with `vercel link`, set `"framework": "hono"` in
-   `.vercel/project.json`, then `pnpm dlx vercel@latest build`.
+3. Deploy the API, then the web app.
 
-3. Deploy the API first, then the web app. From then on, a push to `main` deploys both.
+To reproduce Vercel's build locally: in a plain clone (not a worktree), from `apps/server`, run `vercel link`, set
+`"framework": "hono"` in `.vercel/project.json`, then `pnpm dlx vercel@latest build`.

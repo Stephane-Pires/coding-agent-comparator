@@ -35,20 +35,13 @@ AGENT_RUNTIME=recorded npx pnpm@10.15.1 dev
 
 Each one was run on both agents.
 
-| Prompt                                                                                                                                            | Shows                                                                                    |
-| ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `Write slugify.mjs exporting a slugify function, with tests in slugify.test.mjs using node:test, then run the tests.`                             | File edits and commands, two files to open                                               |
-| `Search the web for a free exchange-rate API that needs no key, then write rate.mjs that prints the current EUR to USD rate from it, and run it.` | A web search with its sources, then code that uses it                                    |
-| `Create hello.mjs that prints hi, then run it.`                                                                                                   | The shortest full run, in under 10 seconds                                               |
-| `Add unit tests to the existing project.`                                                                                                         | A run that ends **Incomplete**: the folder is empty, and the review says what is missing |
-| `hello`                                                                                                                                           | A task refused before any agent starts, with how to rephrase                             |
-
-## What you are looking at
-
-- **The tracks:** one per agent, on one time scale that never changes. A gate marks each tool call (point at it for the time and the command), a flag marks the finish.
-- **Each run:** what the agent said and did, in order, then the files it left, opened in a read-only editor.
-- **The numbers**, once both runs end: model, duration, tokens, cost, tool calls, files. Only duration is marked as better, because tokens come from different tokenizers.
-- **Two checks by a small model:** before the run, is this a coding task whose result is files? After it, did the agent do it? A run that only asked a question ends **Incomplete**, not Finished.
+| Prompt                                                                                                                                | Shows                                                    | Ends           |
+| ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | -------------- |
+| `Write slugify.mjs exporting a slugify function, with tests in slugify.test.mjs using node:test.`                                     | File edits, two files to open                            | **Finished**   |
+| `Search the web for a free exchange-rate API that needs no key, then write rate.mjs that prints the current EUR to USD rate from it.` | A web search with its sources, then code that uses it    | **Finished**   |
+| `Create hello.mjs that prints hi.`                                                                                                    | The shortest full run, in under 10 seconds               | **Finished**   |
+| `Add unit tests to the existing project.`                                                                                             | The folder is empty, and the review says what is missing | **Incomplete** |
+| `hello`                                                                                                                               | No agent starts; the page says how to rephrase           | **Refused**    |
 
 ## How it is built
 
