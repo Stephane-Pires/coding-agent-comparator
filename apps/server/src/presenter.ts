@@ -17,7 +17,7 @@ export const RATE_LIMITED =
  * The outcome as a visitor sees it. A refusal of the app, or a provider limiting requests, is said plainly; the
  * provider's real words go to `log`.
  */
-function shown(outcome: RunOutcome, log: (line: string) => void): RunOutcome {
+function getShownOutcome(outcome: RunOutcome, log: (line: string) => void): RunOutcome {
   if (outcome.status !== 'failed') return outcome;
   if (isAccessRefused(outcome.reason)) {
     log(`A provider refused the app's access. Its words: ${outcome.reason}`);
@@ -38,21 +38,28 @@ export async function* present(
   yield { type: 'start' };
   let messages = 0;
   for await (const event of events) {
-    if (event.kind === 'message') {
-      const id = `message-${++messages}`;
-      yield { type: 'text-start', id };
-      yield { type: 'text-delta', id, delta: event.text };
-      yield { type: 'text-end', id };
-    } else if (event.kind === 'tool-call') {
-      // The call's own id: a later chunk for the same call replaces the earlier one on the client.
-      yield { type: 'data-tool-call', id: event.call.id, data: event.call };
-    } else if (event.kind === 'file') {
-      // The file's path: a later chunk for the same file replaces the earlier one on the client.
-      yield { type: 'data-file', id: event.file.path, data: event.file };
-    } else if (event.kind === 'metrics') {
-      yield { type: 'data-metrics', data: event.metrics };
-    } else {
-      yield { type: 'data-outcome', data: shown(event.outcome, log) };
+    switch (event.kind) {
+      case 'message': {
+        const id = `message-${++messages}`;
+        yield { type: 'text-start', id };
+        yield { type: 'text-delta', id, delta: event.text };
+        yield { type: 'text-end', id };
+        break;
+      }
+      case 'tool-call':
+        // The call's own id: a later chunk for the same call replaces the earlier one on the client.
+        yield { type: 'data-tool-call', id: event.call.id, data: event.call };
+        break;
+      case 'file':
+        // The file's path: a later chunk for the same file replaces the earlier one on the client.
+        yield { type: 'data-file', id: event.file.path, data: event.file };
+        break;
+      case 'metrics':
+        yield { type: 'data-metrics', data: event.metrics };
+        break;
+      case 'finished':
+        yield { type: 'data-outcome', data: getShownOutcome(event.outcome, log) };
+        break;
     }
   }
   yield { type: 'finish' };

@@ -10,7 +10,10 @@ import { z } from 'zod';
 import { Task } from '@comparator/domain';
 
 import { measure } from './measure.ts';
-import { route } from './route.ts';
+import { getRoute } from './route.ts';
+
+/** Long enough for Claude Code to start and answer; a case that takes longer counts as an error. */
+const ANSWER_TIMEOUT_MS = 90_000;
 
 const Labelled = z.object({
   kind: z.string(),
@@ -23,7 +26,7 @@ const Labelled = z.object({
 
 const path = join(import.meta.dirname, '../../../../fixtures/run-review.json');
 const { runs } = z.object({ runs: z.array(Labelled) }).parse(JSON.parse(readFileSync(path, 'utf8')));
-const { name, model, reviewer } = route();
+const { name, model, reviewer } = getRoute();
 
 await measure({
   model: `${model}, through ${name}`,
@@ -31,7 +34,7 @@ await measure({
   title: ({ task, answer }) => `${task} | ${answer}`.replaceAll('\n', ' '),
   answer: async ({ task, answer, files, toolCalls }) => {
     const work = { task: Task.parse(task), answer, files, toolCalls };
-    const review = await reviewer.review(work, AbortSignal.timeout(90_000));
+    const review = await reviewer.review(work, AbortSignal.timeout(ANSWER_TIMEOUT_MS));
     return { got: review.isTaskDone ? 'done' : 'not-done', reason: review.reason };
   },
   // Calling finished work incomplete is worse than missing an agent that stopped short.

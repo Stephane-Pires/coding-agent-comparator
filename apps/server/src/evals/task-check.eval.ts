@@ -10,20 +10,23 @@ import { z } from 'zod';
 import { Task, getVerdict } from '@comparator/domain';
 
 import { measure } from './measure.ts';
-import { route } from './route.ts';
+import { getRoute } from './route.ts';
+
+/** Long enough for Claude Code to start and answer; a case that takes longer counts as an error. */
+const ANSWER_TIMEOUT_MS = 90_000;
 
 const Labelled = z.object({ kind: z.string(), expect: z.enum(['accepted', 'refused']), task: z.string() });
 
 const path = join(import.meta.dirname, '../../../../fixtures/task-check.json');
 const { tasks } = z.object({ tasks: z.array(Labelled) }).parse(JSON.parse(readFileSync(path, 'utf8')));
-const { name, model, classifier } = route();
+const { name, model, classifier } = getRoute();
 
 await measure({
   model: `${model}, through ${name}`,
   cases: tasks,
   title: ({ task }) => task,
   answer: async ({ task }) => {
-    const assessment = await classifier.assess(Task.parse(task), AbortSignal.timeout(90_000));
+    const assessment = await classifier.assess(Task.parse(task), AbortSignal.timeout(ANSWER_TIMEOUT_MS));
     return { got: getVerdict(assessment).verdict, reason: assessment.reason };
   },
   // Refusing real work is worse than letting a poem through.

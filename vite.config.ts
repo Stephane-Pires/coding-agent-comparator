@@ -35,6 +35,8 @@ export default defineConfig({
       'import/no-unassigned-import': ['warn', { allow: ['**/*.css'] }],
       // A run is a stream: its events are awaited one after the other on purpose.
       'no-await-in-loop': 'off',
+      // A switch that covers every case returns from each of them: the compiler knows, this rule does not.
+      'typescript/consistent-return': 'off',
     },
     overrides: [
       {

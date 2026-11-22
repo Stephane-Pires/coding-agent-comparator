@@ -15,7 +15,7 @@ import { createLocalWorkspaces } from '@comparator/workspace-local';
 
 import type { Config } from '../config.ts';
 import type { Runtime } from '../container.ts';
-import { hostedRuntime } from './hosted.ts';
+import { createHostedRuntime } from './hosted.ts';
 
 /** The recordings of real runs that the `recorded` runtime replays (`pnpm fixtures:record` makes them). */
 export const RECORDINGS_FILE = join(import.meta.dirname, '../../../../fixtures/recordings.json');
@@ -25,7 +25,7 @@ export const RECORDINGS_FILE = join(import.meta.dirname, '../../../../fixtures/r
  * way. With a key, the Anthropic API directly, in under a second. Without one, Claude Code on the machine's login,
  * which takes the few seconds a process needs to start.
  */
-export function questions(config: Config): Pick<Runtime, 'classifier' | 'reviewer'> {
+export function createQuestions(config: Config): Pick<Runtime, 'classifier' | 'reviewer'> {
   const { model, apiKey } = config.taskCheck;
   return apiKey === undefined
     ? {
@@ -39,7 +39,7 @@ export function questions(config: Config): Pick<Runtime, 'classifier' | 'reviewe
  * Every runtime a machine of ours can use, chosen by `AGENT_RUNTIME`: the agents on this machine, the agents in
  * sandboxes, or recordings.
  */
-export function machineRuntime(config: Config): Runtime {
+export function createMachineRuntime(config: Config): Runtime {
   const runtimes = {
     local: (): Runtime => ({
       agents: {
@@ -47,9 +47,9 @@ export function machineRuntime(config: Config): Runtime {
         codex: createCodexAgent(config.codex.model, config.codex.apiKey),
       },
       workspaces: createLocalWorkspaces(),
-      ...questions(config),
+      ...createQuestions(config),
     }),
-    sandbox: () => hostedRuntime(config),
+    sandbox: () => createHostedRuntime(config),
     recorded: () =>
       createRecordedRuntime(
         z.array(Recording).parse(JSON.parse(readFileSync(RECORDINGS_FILE, 'utf8'))),

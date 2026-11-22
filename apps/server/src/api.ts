@@ -17,10 +17,11 @@ import { Hono } from 'hono';
 import type { CheckTask, StartRun } from '@comparator/application';
 import { contract } from '@comparator/contracts';
 
-import { createAccess, type AccessOptions } from './access.ts';
+import type { Access } from './access.ts';
 import { present } from './presenter.ts';
 
-export interface AppDeps {
+/** What the API serves: the two use cases. */
+export interface UseCases {
   readonly startRun: StartRun;
   readonly checkTask: CheckTask;
 }
@@ -42,7 +43,7 @@ const NEVER_ABORTED = new AbortController().signal;
  * response holds it back until it has enough to compress, which for a stream of events means until the end:
  * `no-transform` tells it to pass each event on as it is.
  */
-function live(response: Response): Response {
+function keepStreamLive(response: Response): Response {
   if (response.headers.get('content-type')?.startsWith('text/event-stream'))
     response.headers.set('cache-control', 'no-cache, no-transform');
   return response;
@@ -54,13 +55,12 @@ function live(response: Response): Response {
  *
  * This file builds the API from what it is given. `main.ts` serves it on a machine; `index.ts` hands it to Vercel.
  */
-export function createApp({ startRun, checkTask }: AppDeps, options: AccessOptions): Hono {
-  const access = createAccess(options);
+export function createApp({ startRun, checkTask }: UseCases, access: Access): Hono {
   const os = implement(contract).$context<Context>();
   // What can start work, and so spend the API keys, is for those who gave the password.
   const locked = os.middleware(async ({ context, next }) => {
     const headers = context.reqHeaders ?? new Headers();
-    if (access.allows(headers)) return next();
+    if (access.isAllowed(headers)) return next();
     // A password sent with the call was wrong: it costs the same wait as on the form.
     if (headers.has('authorization')) await wait(WRONG_PASSWORD_WAIT_MS);
     throw new ORPCError('UNAUTHORIZED');
@@ -68,12 +68,12 @@ export function createApp({ startRun, checkTask }: AppDeps, options: AccessOptio
   const router = os.router({
     access: {
       get: os.access.get.handler(({ context }) => ({
-        isAllowed: access.allows(context.reqHeaders ?? new Headers()),
+        isAllowed: access.isAllowed(context.reqHeaders ?? new Headers()),
       })),
       enter: os.access.enter.handler(async ({ input, context }) => {
         const isAllowed = access.isPassword(input.password);
         if (!isAllowed) await wait(WRONG_PASSWORD_WAIT_MS);
-        if (isAllowed && access.required) context.resHeaders?.set('set-cookie', access.passCookie());
+        if (isAllowed && access.isRequired) context.resHeaders?.set('set-cookie', access.getPassCookie());
         return { isAllowed };
       }),
     },
@@ -96,11 +96,11 @@ export function createApp({ startRun, checkTask }: AppDeps, options: AccessOptio
   const app = new Hono();
   app.use('/rpc/*', async (c, next) => {
     const { matched, response } = await rpc.handle(c.req.raw, { prefix: '/rpc', context: {} });
-    return matched ? live(response) : next();
+    return matched ? keepStreamLive(response) : next();
   });
   app.use('/api/*', async (c, next) => {
     const { matched, response } = await rest.handle(c.req.raw, { prefix: '/api', context: {} });
-    return matched ? live(response) : next();
+    return matched ? keepStreamLive(response) : next();
   });
   app.get('/openapi.json', async (c) =>
     c.json(
@@ -112,7 +112,7 @@ export function createApp({ startRun, checkTask }: AppDeps, options: AccessOptio
         },
         servers: [{ url: '/api' }],
         // Gives the reference a field for the password, sent with each call made from it.
-        ...(access.required
+        ...(access.isRequired
           ? {
               components: { securitySchemes: { password: { type: 'http' as const, scheme: 'bearer' } } },
               security: [{ password: [] }],

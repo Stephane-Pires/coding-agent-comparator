@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vite-plus/test';
 import { startRun, type CheckTask, type ReviewRun } from '@comparator/application';
 import { inMemoryWorkspaces, scriptedAgent, tickingClock, type Step } from '@comparator/application/testing';
 
+import { createAccess } from './access.ts';
 import { createApp, WRONG_PASSWORD_WAIT_MS } from './api.ts';
 
 const accepts: CheckTask = () => Promise.resolve({ verdict: 'accepted' });
@@ -32,7 +33,7 @@ function setup(
         reviewRun,
       }),
     },
-    { password, https: true },
+    createAccess(password, true),
   );
   const post = (path: string, body: unknown, signal?: AbortSignal) =>
     app.request(path, {
